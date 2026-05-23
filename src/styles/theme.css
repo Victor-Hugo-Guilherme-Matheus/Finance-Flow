@@ -1,0 +1,402 @@
+@custom-variant dark (&:is(.dark *));
+
+:root,
+.light {
+  --font-size: 16px;
+
+  /* Light palette (proportions: 45% / 30% / 15% / 10%) */
+  --ff-soft-cyan: #e6f7fa;
+  --ff-soft-green: #e8f5ed;
+  --ff-vibrant-light-cyan: #b3f0ff;
+  --ff-vibrant-light-blue: #d6e4ff;
+
+  --ff-bg: var(--ff-soft-cyan);
+  --ff-bg-secondary: var(--ff-soft-green);
+  --ff-accent-surface: var(--ff-vibrant-light-cyan);
+  --ff-accent-highlight: var(--ff-vibrant-light-blue);
+  --ff-cyan: #079697;
+  --ff-blue: #5b6bf5;
+  --ff-surface: rgba(255, 255, 255, 0.82);
+  --ff-surface-hover: color-mix(in srgb, var(--ff-vibrant-light-cyan) 40%, white);
+  --ff-border: color-mix(in srgb, var(--ff-vibrant-light-cyan) 55%, white);
+  --ff-border-strong: var(--ff-vibrant-light-cyan);
+  --ff-text: #0d3d45;
+  --ff-text-muted: rgba(13, 61, 69, 0.62);
+  --ff-text-faint: rgba(13, 61, 69, 0.42);
+  --ff-on-accent: #ffffff;
+  --ff-expense: #e85d8a;
+  --ff-success: #00a884;
+  --ff-warning: #d4a012;
+  --ff-nav-bg: color-mix(in srgb, var(--ff-soft-green) 92%, white);
+  --ff-overlay: rgba(13, 61, 69, 0.28);
+  --ff-input-bg: rgba(255, 255, 255, 0.92);
+  --ff-chart-axis: rgba(13, 61, 69, 0.35);
+  --ff-glow-cyan: color-mix(in srgb, var(--ff-vibrant-light-cyan) 50%, transparent);
+  --ff-glow-blue: color-mix(in srgb, var(--ff-vibrant-light-blue) 50%, transparent);
+  --ff-gradient-card: linear-gradient(
+    135deg,
+    var(--ff-cyan) 0%,
+    var(--ff-blue) 100%
+  );
+  --ff-gradient-page: linear-gradient(
+    to bottom right,
+    var(--ff-bg) 45%,
+    var(--ff-bg-secondary) 75%,
+    color-mix(in srgb, var(--ff-accent-highlight) 35%, var(--ff-bg-secondary)) 100%
+  );
+
+  --dark-cyan: #020e0f;
+  --dark-green: #02140a;
+  --vivid-cyan: #079697;
+  --vivid-blue: #5b6bf5;
+  --background: var(--ff-bg);
+  --foreground: oklch(0.145 0 0);
+  --card: #ffffff;
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: #030213;
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.95 0.0058 264.53);
+  --secondary-foreground: #030213;
+  --muted: #ececf0;
+  --muted-foreground: #717182;
+  --accent: #e9ebef;
+  --accent-foreground: #030213;
+  --destructive: #d4183d;
+  --destructive-foreground: #ffffff;
+  --border: rgba(0, 0, 0, 0.1);
+  --input: transparent;
+  --input-background: #f3f3f5;
+  --switch-background: #cbced4;
+  --font-weight-medium: 500;
+  --font-weight-normal: 400;
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: #030213;
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+
+.dark {
+  --ff-soft-cyan: #e6f7fa;
+  --ff-soft-green: #e8f5ed;
+  --ff-vibrant-light-cyan: #b3f0ff;
+  --ff-vibrant-light-blue: #d6e4ff;
+
+  --ff-bg: #020e0f;
+  --ff-bg-secondary: #02140a;
+  --ff-accent-surface: rgba(7, 150, 151, 0.2);
+  --ff-accent-highlight: rgba(91, 107, 245, 0.2);
+  --ff-cyan: #079697;
+  --ff-blue: #5b6bf5;
+  --ff-surface: rgba(255, 255, 255, 0.05);
+  --ff-surface-hover: rgba(255, 255, 255, 0.1);
+  --ff-border: rgba(7, 150, 151, 0.2);
+  --ff-border-strong: rgba(7, 150, 151, 0.35);
+  --ff-text: #ffffff;
+  --ff-text-muted: rgba(255, 255, 255, 0.6);
+  --ff-text-faint: rgba(255, 255, 255, 0.4);
+  --ff-on-accent: #ffffff;
+  --ff-expense: #ff6b9d;
+  --ff-success: #00d4aa;
+  --ff-warning: #ffd93d;
+  --ff-nav-bg: rgba(2, 20, 10, 0.95);
+  --ff-overlay: rgba(0, 0, 0, 0.6);
+  --ff-input-bg: rgba(255, 255, 255, 0.05);
+  --ff-chart-axis: rgba(255, 255, 255, 0.25);
+  --ff-glow-cyan: rgba(7, 150, 151, 0.2);
+  --ff-glow-blue: rgba(91, 107, 245, 0.2);
+  --ff-gradient-card: linear-gradient(135deg, #079697 0%, #5b6bf5 100%);
+  --ff-gradient-page: linear-gradient(to bottom right, #020e0f, #02140a);
+
+  --background: var(--dark-cyan);
+  --foreground: #ffffff;
+  --card: rgba(7, 150, 151, 0.1);
+  --card-foreground: #ffffff;
+  --popover: var(--dark-green);
+  --popover-foreground: #ffffff;
+  --primary: var(--vivid-cyan);
+  --primary-foreground: #ffffff;
+  --secondary: rgba(7, 150, 151, 0.2);
+  --secondary-foreground: #ffffff;
+  --muted: rgba(7, 150, 151, 0.15);
+  --muted-foreground: rgba(255, 255, 255, 0.6);
+  --accent: rgba(91, 107, 245, 0.2);
+  --accent-foreground: #ffffff;
+  --destructive: #ff4757;
+  --destructive-foreground: #ffffff;
+  --border: rgba(7, 150, 151, 0.2);
+  --input: rgba(7, 150, 151, 0.1);
+  --ring: var(--vivid-cyan);
+  --font-weight-medium: 500;
+  --font-weight-normal: 400;
+  --chart-1: var(--vivid-cyan);
+  --chart-2: var(--vivid-blue);
+  --chart-3: #00d4aa;
+  --chart-4: #ff6b9d;
+  --chart-5: #ffd93d;
+  --sidebar: var(--dark-green);
+  --sidebar-foreground: #ffffff;
+  --sidebar-primary: var(--vivid-cyan);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: rgba(7, 150, 151, 0.2);
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: rgba(7, 150, 151, 0.2);
+  --sidebar-ring: var(--vivid-cyan);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-input-background: var(--input-background);
+  --color-switch-background: var(--switch-background);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  /**
+  * Default typography styles for HTML elements (h1-h4, p, label, button, input).
+  * These are in @layer base, so Tailwind utility classes (like text-sm, text-lg) automatically override them.
+  */
+
+  html {
+    font-size: var(--font-size);
+  }
+
+  h1 {
+    font-size: var(--text-2xl);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  h2 {
+    font-size: var(--text-xl);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  h3 {
+    font-size: var(--text-lg);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  h4 {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  label {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  button {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  input {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-normal);
+    line-height: 1.5;
+  }
+}
+
+@layer components {
+  .ff-page {
+    height: 100vh;
+    width: 100%;
+    max-width: 28rem;
+    margin-left: auto;
+    margin-right: auto;
+    overflow-y: auto;
+    padding-bottom: 6rem;
+    background: var(--ff-gradient-page);
+    color: var(--ff-text);
+  }
+
+  .ff-app-shell {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    background: var(--ff-bg);
+    color: var(--ff-text);
+  }
+
+  .ff-card {
+    background: var(--ff-surface);
+    border: 1px solid var(--ff-border);
+    backdrop-filter: blur(24px);
+    border-radius: 1rem;
+  }
+
+  .ff-card-lg {
+    background: var(--ff-surface);
+    border: 1px solid var(--ff-border);
+    backdrop-filter: blur(24px);
+    border-radius: 1.5rem;
+  }
+
+  .ff-card-interactive {
+    background: var(--ff-surface);
+    border: 1px solid var(--ff-border);
+    backdrop-filter: blur(24px);
+    border-radius: 1rem;
+    transition: background-color 0.2s;
+  }
+
+  .ff-card-interactive:hover {
+    background: var(--ff-surface-hover);
+  }
+
+  .ff-text {
+    color: var(--ff-text);
+  }
+
+  .ff-text-muted {
+    color: var(--ff-text-muted);
+  }
+
+  .ff-text-faint {
+    color: var(--ff-text-faint);
+  }
+
+  .ff-heading {
+    color: var(--ff-text);
+    font-weight: 700;
+  }
+
+  .ff-gradient-banner {
+    background: var(--ff-gradient-card);
+    color: var(--ff-on-accent);
+    border-radius: 1.5rem;
+    box-shadow: 0 25px 50px -12px var(--ff-glow-cyan);
+  }
+
+  .ff-btn-primary {
+    background: var(--ff-gradient-card);
+    color: var(--ff-on-accent);
+    border-radius: 1rem;
+    font-weight: 600;
+    box-shadow: 0 10px 15px -3px var(--ff-glow-cyan);
+    transition: box-shadow 0.2s;
+  }
+
+  .ff-btn-primary:hover {
+    box-shadow: 0 10px 25px -3px var(--ff-glow-cyan);
+  }
+
+  .ff-input {
+    width: 100%;
+    background: var(--ff-input-bg);
+    border: 1px solid var(--ff-border-strong);
+    border-radius: 1rem;
+    color: var(--ff-text);
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .ff-input::placeholder {
+    color: var(--ff-text-faint);
+  }
+
+  .ff-input:focus {
+    outline: none;
+    border-color: var(--ff-cyan);
+    box-shadow: 0 0 0 2px var(--ff-glow-cyan);
+  }
+
+  .ff-nav {
+    background: var(--ff-nav-bg);
+    border-top: 1px solid var(--ff-border);
+    backdrop-filter: blur(24px);
+  }
+
+  .ff-fab {
+    background: var(--ff-gradient-card);
+    color: var(--ff-on-accent);
+    box-shadow: 0 25px 50px -12px var(--ff-glow-cyan);
+  }
+
+  .ff-avatar {
+    background: var(--ff-gradient-card);
+    color: var(--ff-on-accent);
+  }
+
+  .ff-icon-chip {
+    background: color-mix(in srgb, var(--ff-cyan) 20%, transparent);
+    color: var(--ff-cyan);
+  }
+
+  .ff-nav-active {
+    background: var(--ff-accent-surface);
+    color: var(--ff-cyan);
+  }
+
+  .ff-toggle-track-on {
+    background: var(--ff-cyan);
+  }
+
+  .ff-toggle-track-off {
+    background: var(--ff-accent-highlight);
+  }
+
+  .light .ff-toggle-track-off {
+    background: color-mix(in srgb, var(--ff-vibrant-light-blue) 60%, white);
+  }
+}
