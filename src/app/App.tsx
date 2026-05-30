@@ -1,34 +1,44 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import SplashScreen from "./components/SplashScreen";
-import LoginScreen from "./components/LoginScreen";
+import AuthScreen from "./components/AuthScreen";
 import HomeDashboard from "./components/HomeDashboard";
-import AddExpenseScreen from "./components/AddExpenseScreen";
+import TransactionsScreen from "./components/TransactionsScreen";
+import TransactionFormModal from "./components/TransactionFormModal";
 import FinancialGoalsScreen from "./components/FinancialGoalsScreen";
 import ProfileScreen from "./components/ProfileScreen";
 import BottomNavigation from "./components/BottomNavigation";
 import { Plus } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
 
-export default function App() {
-  const [currentView, setCurrentView] = useState<"splash" | "login" | "app">("splash");
+function AppContent() {
+  const { user, logout, isLoading } = useAuth();
+  const [currentView, setCurrentView] = useState<"splash" | "auth" | "app">("splash");
   const [activeScreen, setActiveScreen] = useState("home");
-  const [showAddExpense, setShowAddExpense] = useState(false);
+  const [showAddTransaction, setShowAddTransaction] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      setCurrentView("login");
+      setCurrentView(user ? "app" : "auth");
     }, 3000);
     return () => clearTimeout(timer);
-  }, []);
+  }, [user]);
 
-  const handleLogin = () => {
+  useEffect(() => {
+    if (!isLoading && user && currentView === "auth") {
+      setCurrentView("app");
+    }
+  }, [user, isLoading, currentView]);
+
+  const handleAuthenticated = () => {
     setCurrentView("app");
   };
 
   const handleLogout = () => {
-    setShowAddExpense(false);
+    logout();
+    setShowAddTransaction(false);
     setActiveScreen("home");
-    setCurrentView("login");
+    setCurrentView("auth");
   };
 
   const renderScreen = () => {
@@ -36,7 +46,7 @@ export default function App() {
       case "home":
         return <HomeDashboard />;
       case "transactions":
-        return <HomeDashboard />;
+        return <TransactionsScreen />;
       case "goals":
         return <FinancialGoalsScreen />;
       case "profile":
@@ -50,8 +60,8 @@ export default function App() {
     return <SplashScreen />;
   }
 
-  if (currentView === "login") {
-    return <LoginScreen onLogin={handleLogin} />;
+  if (currentView === "auth" || !user) {
+    return <AuthScreen onAuthenticated={handleAuthenticated} />;
   }
 
   return (
@@ -68,12 +78,14 @@ export default function App() {
         </motion.div>
       </AnimatePresence>
 
+      {/* FAB global para adicionar transação rápida */}
       <motion.button
-        onClick={() => setShowAddExpense(true)}
+        onClick={() => setShowAddTransaction(true)}
         className="ff-fab fixed bottom-24 right-6 w-16 h-16 rounded-full flex items-center justify-center z-50"
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
         style={{ maxWidth: "calc(448px - 3rem)", marginLeft: "auto", marginRight: "1.5rem" }}
+        aria-label="Adicionar transação"
       >
         <Plus className="w-8 h-8" />
       </motion.button>
@@ -81,8 +93,14 @@ export default function App() {
       <BottomNavigation activeScreen={activeScreen} onNavigate={setActiveScreen} />
 
       <AnimatePresence>
-        {showAddExpense && <AddExpenseScreen onClose={() => setShowAddExpense(false)} />}
+        {showAddTransaction && (
+          <TransactionFormModal onClose={() => setShowAddTransaction(false)} />
+        )}
       </AnimatePresence>
     </div>
   );
+}
+
+export default function App() {
+  return <AppContent />;
 }
