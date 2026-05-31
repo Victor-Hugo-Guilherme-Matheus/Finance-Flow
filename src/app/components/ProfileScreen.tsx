@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { motion } from "motion/react";
 import {
   User,
@@ -13,19 +14,23 @@ import {
 } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageContext";
 import { useTheme } from "../../theme/ThemeContext";
+import { useAuth } from "../../context/AuthContext";
+import { useFinance } from "../../context/FinanceContext";
 import type { Locale } from "../../i18n/translations";
+import { formatCurrency } from "../../utils/format";
+import ProfileSubScreens, { type ProfileSubView } from "./ProfileSubScreens";
 
 interface ProfileScreenProps {
   onLogout: () => void;
 }
 
 const menuItems = [
-  { id: 1, icon: User, labelKey: "profile.personalInfo", color: "#079697" },
-  { id: 2, icon: Bell, labelKey: "profile.notifications", color: "#5b6bf5", badge: "3" },
-  { id: 4, icon: Lock, labelKey: "profile.security", color: "#ff6b9d" },
-  { id: 5, icon: CreditCard, labelKey: "profile.paymentMethods", color: "#ffd93d" },
-  { id: 6, icon: FileText, labelKey: "profile.exportReport", color: "#079697" },
-  { id: 7, icon: HelpCircle, labelKey: "profile.help", color: "#5b6bf5" },
+  { id: "personal", icon: User, labelKey: "profile.personalInfo", color: "#079697" },
+  { id: "notifications", icon: Bell, labelKey: "profile.notifications", color: "#5b6bf5", badge: "3" },
+  { id: "security", icon: Lock, labelKey: "profile.security", color: "#ff6b9d" },
+  { id: "payment", icon: CreditCard, labelKey: "profile.paymentMethods", color: "#ffd93d" },
+  { id: "export", icon: FileText, labelKey: "profile.exportReport", color: "#079697" },
+  { id: "help", icon: HelpCircle, labelKey: "profile.help", color: "#5b6bf5" },
 ] as const;
 
 function LanguageToggle() {
@@ -57,9 +62,7 @@ function LanguageToggle() {
               locale === option.value ? "text-white" : "ff-text-muted"
             }`}
             style={
-              locale === option.value
-                ? { backgroundColor: "var(--ff-cyan)" }
-                : undefined
+              locale === option.value ? { backgroundColor: "var(--ff-cyan)" } : undefined
             }
           >
             {option.label}
@@ -105,20 +108,34 @@ function DarkModeToggle() {
 
 export default function ProfileScreen({ onLogout }: ProfileScreenProps) {
   const { t } = useLanguage();
+  const { user } = useAuth();
+  const { goals, dashboardStats } = useFinance();
+  const [subView, setSubView] = useState<ProfileSubView>(null);
+
+  const activeGoals = goals.filter((g) => g.status === "active");
+  const avgProgress =
+    activeGoals.length > 0
+      ? activeGoals.reduce((s, g) => s + (g.currentAmount / g.targetAmount) * 100, 0) /
+        activeGoals.length
+      : 0;
+
+  if (subView) {
+    return <ProfileSubScreens view={subView} onBack={() => setSubView(null)} />;
+  }
 
   return (
     <div className="ff-page">
       <div className="p-6">
         <h2 className="ff-heading text-2xl mb-8">{t("profile.title")}</h2>
 
-        <motion.div className="ff-card-lg p-6 mb-6" whileHover={{ scale: 1.02 }}>
+        <motion.div className="ff-card-lg p-6 mb-6" whileHover={{ scale: 1.01 }}>
           <div className="flex items-center gap-4">
             <div className="w-20 h-20 rounded-full ff-avatar flex items-center justify-center text-2xl font-bold flex-shrink-0">
-              VH
+              {user?.avatarInitials ?? "?"}
             </div>
             <div className="flex-1">
-              <h3 className="ff-heading text-xl">Victor Hugo</h3>
-              <p className="ff-text-muted text-sm">victorhugo_souza99@live.com</p>
+              <h3 className="ff-heading text-xl">{user?.fullName ?? ""}</h3>
+              <p className="ff-text-muted text-sm">{user?.email ?? ""}</p>
               <div
                 className="mt-2 inline-flex items-center gap-2 px-3 py-1 rounded-full"
                 style={{
@@ -139,15 +156,17 @@ export default function ProfileScreen({ onLogout }: ProfileScreenProps) {
 
         <div className="grid grid-cols-3 gap-3 mb-6">
           <div className="ff-card-lg p-4 text-center">
-            <p className="ff-heading text-xl font-bold">42</p>
+            <p className="ff-heading text-xl font-bold">{activeGoals.length}</p>
             <p className="ff-text-muted text-xs mt-1">{t("profile.statGoals")}</p>
           </div>
           <div className="ff-card-lg p-4 text-center">
-            <p className="ff-heading text-xl font-bold">$156K</p>
+            <p className="ff-heading text-xl font-bold">
+              {formatCurrency(dashboardStats.accumulatedSavings)}
+            </p>
             <p className="ff-text-muted text-xs mt-1">{t("profile.statSaved")}</p>
           </div>
           <div className="ff-card-lg p-4 text-center">
-            <p className="ff-heading text-xl font-bold">89%</p>
+            <p className="ff-heading text-xl font-bold">{avgProgress.toFixed(0)}%</p>
             <p className="ff-text-muted text-xs mt-1">{t("profile.statProgress")}</p>
           </div>
         </div>
@@ -163,6 +182,8 @@ export default function ProfileScreen({ onLogout }: ProfileScreenProps) {
             return (
               <motion.button
                 key={item.id}
+                type="button"
+                onClick={() => setSubView(item.id as ProfileSubView)}
                 className="w-full ff-card-interactive p-4 flex items-center gap-4"
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
