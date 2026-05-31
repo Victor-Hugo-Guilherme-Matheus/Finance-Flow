@@ -2,6 +2,8 @@ import { useState } from "react";
 import { motion } from "motion/react";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageContext";
+import { auth } from "../../services/firebase";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
 
 interface LoginScreenProps {
   onLogin: () => void;
@@ -9,7 +11,37 @@ interface LoginScreenProps {
 
 export default function LoginScreen({ onLogin }: LoginScreenProps) {
   const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const { t } = useLanguage();
+
+  const handleSignIn = async () => {
+    setError("");
+    setLoading(true);
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      onLogin();
+    } catch (err: any) {
+      setError("Email ou senha inválidos.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSignUp = async () => {
+    setError("");
+    setLoading(true);
+    try {
+      await createUserWithEmailAndPassword(auth, email, password);
+      onLogin();
+    } catch (err: any) {
+      setError("Erro ao criar conta. Verifique os dados.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="ff-page flex items-center justify-center px-6 relative overflow-hidden">
@@ -20,7 +52,6 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
             "linear-gradient(to bottom right, color-mix(in srgb, var(--ff-cyan) 10%, transparent), transparent, color-mix(in srgb, var(--ff-blue) 10%, transparent))",
         }}
       />
-
       <motion.div
         className="relative z-10 w-full"
         initial={{ opacity: 0, y: 20 }}
@@ -30,7 +61,6 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
           <h1 className="text-4xl font-bold ff-heading mb-2">{t("login.title")}</h1>
           <p className="ff-text-muted">{t("login.subtitle")}</p>
         </div>
-
         <div className="space-y-4">
           <div className="relative">
             <div className="absolute left-4 top-1/2 -translate-y-1/2">
@@ -39,10 +69,11 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
             <input
               type="email"
               placeholder={t("login.email")}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               className="ff-input px-12 py-4"
             />
           </div>
-
           <div className="relative">
             <div className="absolute left-4 top-1/2 -translate-y-1/2">
               <Lock className="w-5 h-5" style={{ color: "var(--ff-cyan)" }} />
@@ -50,6 +81,8 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
             <input
               type={showPassword ? "text" : "password"}
               placeholder={t("login.password")}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               className="ff-input px-12 py-4"
             />
             <button
@@ -61,42 +94,31 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
             </button>
           </div>
 
-          <div className="text-right">
-            <button
-              className="text-sm transition-colors"
-              style={{ color: "var(--ff-cyan)" }}
-            >
-              {t("login.forgotPassword")}
-            </button>
-          </div>
+          {error && (
+            <p className="text-red-400 text-sm text-center">{error}</p>
+          )}
 
           <motion.button
-            onClick={onLogin}
+            onClick={handleSignIn}
+            disabled={loading}
             className="w-full ff-btn-primary px-6 py-4"
             whileTap={{ scale: 0.98 }}
           >
-            {t("login.signIn")}
+            {loading ? "Entrando..." : t("login.signIn")}
           </motion.button>
 
           <div className="text-center mt-6">
             <p className="ff-text-muted text-sm">
               {t("login.noAccount")}{" "}
-              <button className="transition-colors" style={{ color: "var(--ff-cyan)" }}>
+              <button
+                onClick={handleSignUp}
+                className="transition-colors"
+                style={{ color: "var(--ff-cyan)" }}
+              >
                 {t("login.signUp")}
               </button>
             </p>
           </div>
-        </div>
-
-        <div className="mt-12 flex items-center gap-4">
-          <div className="flex-1 h-px" style={{ backgroundColor: "var(--ff-border)" }} />
-          <span className="ff-text-faint text-sm">{t("login.orContinue")}</span>
-          <div className="flex-1 h-px" style={{ backgroundColor: "var(--ff-border)" }} />
-        </div>
-
-        <div className="mt-6 grid grid-cols-2 gap-4">
-          <button className="ff-card-interactive py-3 ff-text">Google</button>
-          <button className="ff-card-interactive py-3 ff-text">Apple</button>
         </div>
       </motion.div>
     </div>

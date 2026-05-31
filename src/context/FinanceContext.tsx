@@ -8,7 +8,21 @@ import {
   type ReactNode,
 } from "react";
 import type { Goal, PaymentCard, Transaction, UserPreferences } from "../types";
-import { financeService } from "../services/dataService";
+import {
+  collection,
+  query,
+  where,
+  orderBy,
+  onSnapshot,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  doc,
+  serverTimestamp,
+  getDoc,
+  setDoc,
+} from "firebase/firestore";
+import { db } from "../services/firebase";
 import {
   computeCategoryBreakdown,
   computeDashboardStats,
@@ -27,18 +41,31 @@ interface FinanceContextValue {
   categoryBreakdown: ReturnType<typeof computeCategoryBreakdown>;
   monthlyComparison: ReturnType<typeof computeMonthlyComparison>;
   highlights: ReturnType<typeof getHighlightCards>;
-  addTransaction: (
-    data: Omit<Transaction, "id" | "history" | "createdAt" | "updatedAt">
-  ) => Transaction;
-  updateTransaction: (id: string, data: Partial<Transaction>) => Transaction | null;
-  deleteTransaction: (id: string) => void;
-  addGoal: (data: Omit<Goal, "id" | "history" | "status" | "createdAt" | "updatedAt">) => Goal;
-  updateGoal: (id: string, data: Partial<Goal>) => Goal | null;
-  deleteGoal: (id: string) => void;
-  updateCards: (cards: PaymentCard[]) => void;
-  updatePreferences: (prefs: UserPreferences) => void;
+  addTransaction: (data: Omit<Transaction, "id" | "history" | "createdAt" | "updatedAt">) => Promise<void>;
+  updateTransaction: (id: string, data: Partial<Transaction>) => Promise<void>;
+  deleteTransaction: (id: string) => Promise<void>;
+  addGoal: (data: Omit<Goal, "id" | "history" | "status" | "createdAt" | "updatedAt">) => Promise<void>;
+  updateGoal: (id: string, data: Partial<Goal>) => Promise<void>;
+  deleteGoal: (id: string) => Promise<void>;
+  updateCards: (cards: PaymentCard[]) => Promise<void>;
+  updatePreferences: (prefs: UserPreferences) => Promise<void>;
   refreshData: () => void;
 }
+
+const defaultPreferences: UserPreferences = {
+  notifications: {
+    income: true,
+    expenses: true,
+    goals: true,
+    reports: false,
+    reminders: true,
+  },
+  security: {
+    twoFactorEnabled: false,
+    biometricEnabled: false,
+    sessions: [],
+  },
+};
 
 const FinanceContext = createContext<FinanceContextValue | null>(null);
 
@@ -47,114 +74,139 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [cards, setCards] = useState<PaymentCard[]>([]);
-  const [preferences, setPreferences] = useState<UserPreferences>(
-    financeService.getPreferences("")
-  );
-  const [isLoading, setIsLoading] = useState(false);
+  const [preferences, setPreferences] = useState<UserPreferences>(defaultPreferences);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const refreshData = useCallback(() => {
+  // Busca transações em tempo real
+  useEffect(() => {
     if (!user) return;
-    setIsLoading(true);
-    financeService.initializeUserData(user.id);
-    setTransactions(financeService.getTransactions(user.id));
-    setGoals(financeService.getGoals(user.id));
-    setCards(financeService.getCards(user.id));
-    setPreferences(financeService.getPreferences(user.id));
-    setIsLoading(false);
+    const q = query(
+      collection(db, "transactions"),
+      where("userId", "==", user.id),
+      orderBy("date", "desc")
+    );
+    const unsub = onSnapshot(q, (snap) => {
+      setTransactions(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Transaction)));
+      setIsLoading(false);
+    });
+    return () => unsub();
   }, [user]);
 
+  // Busca metas em tempo real
   useEffect(() => {
-    refreshData();
-  }, [refreshData]);
+    if (!user) return;
+    const q = query(
+      collection(db, "goals"),
+      where("userId", "==", user.id),
+      orderBy("createdAt", "desc")
+    );
+    const unsub = onSnapshot(q, (snap) => {
+      setGoals(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Goal)));
+    });
+    return () => unsub();
+  }, [user]);
 
-  const dashboardStats = useMemo(
-    () => computeDashboardStats(transactions),
-    [transactions]
-  );
-  const categoryBreakdown = useMemo(
-    () => computeCategoryBreakdown(transactions),
-    [transactions]
-  );
-  const monthlyComparison = useMemo(
-    () => computeMonthlyComparison(transactions),
-    [transactions]
-  );
-  const highlights = useMemo(
-    () => getHighlightCards(transactions, goals),
-    [transactions, goals]
-  );
+  // Busca preferências
+  useEffect(() => {
+    if (!user) return;
+    const load = async () => {
+      const snap = await getDoc(doc(db, "preferences", user.id));
+      if (snap.exists()) setPreferences(snap.data() as UserPreferences);
+    };
+    load();
+  }, [user]);
+
+  const refreshData = useCallback(() => {}, []);
+
+  const dashboardStats = useMemo(() => computeDashboardStats(transactions), [transactions]);
+  const categoryBreakdown = useMemo(() => computeCategoryBreakdown(transactions), [transactions]);
+  const monthlyComparison = useMemo(() => computeMonthlyComparison(transactions), [transactions]);
+  const highlights = useMemo(() => getHighlightCards(transactions, goals), [transactions, goals]);
 
   const addTransaction = useCallback(
-    (data: Omit<Transaction, "id" | "history" | "createdAt" | "updatedAt">) => {
-      if (!user) throw new Error("Not authenticated");
-      const tx = financeService.addTransaction(user.id, data);
-      setTransactions(financeService.getTransactions(user.id));
-      return tx;
+    async (data: Omit<Transaction, "id" | "history" | "createdAt" | "updatedAt">) => {
+      if (!user) return;
+      const now = new Date().toISOString();
+      await addDoc(collection(db, "transactions"), {
+      ...data,
+      type: data.type ?? "expense",
+      userId: user.id,
+      history: [{ date: now, action: "created" }],
+      createdAt: serverTimestamp(),
+      updatedAt: now,
+    });
     },
     [user]
   );
 
   const updateTransaction = useCallback(
-    (id: string, data: Partial<Transaction>) => {
-      if (!user) return null;
-      const result = financeService.updateTransaction(user.id, id, data);
-      setTransactions(financeService.getTransactions(user.id));
-      return result;
+    async (id: string, data: Partial<Transaction>) => {
+      if (!user) return;
+      const now = new Date().toISOString();
+      await updateDoc(doc(db, "transactions", id), {
+        ...data,
+        updatedAt: now,
+      });
     },
     [user]
   );
 
   const deleteTransaction = useCallback(
-    (id: string) => {
+    async (id: string) => {
       if (!user) return;
-      financeService.deleteTransaction(user.id, id);
-      setTransactions(financeService.getTransactions(user.id));
+      await deleteDoc(doc(db, "transactions", id));
     },
     [user]
   );
 
   const addGoal = useCallback(
-    (data: Omit<Goal, "id" | "history" | "status" | "createdAt" | "updatedAt">) => {
-      if (!user) throw new Error("Not authenticated");
-      const goal = financeService.addGoal(user.id, data);
-      setGoals(financeService.getGoals(user.id));
-      return goal;
+    async (data: Omit<Goal, "id" | "history" | "status" | "createdAt" | "updatedAt">) => {
+      if (!user) return;
+      const now = new Date().toISOString();
+      await addDoc(collection(db, "goals"), {
+        ...data,
+        userId: user.id,
+        status: "active",
+        history: [{ date: now, action: "created" }],
+        createdAt: serverTimestamp(),
+        updatedAt: now,
+      });
     },
     [user]
   );
 
   const updateGoal = useCallback(
-    (id: string, data: Partial<Goal>) => {
-      if (!user) return null;
-      const result = financeService.updateGoal(user.id, id, data);
-      setGoals(financeService.getGoals(user.id));
-      return result;
+    async (id: string, data: Partial<Goal>) => {
+      if (!user) return;
+      await updateDoc(doc(db, "goals", id), {
+        ...data,
+        updatedAt: new Date().toISOString(),
+      });
     },
     [user]
   );
 
   const deleteGoal = useCallback(
-    (id: string) => {
+    async (id: string) => {
       if (!user) return;
-      financeService.deleteGoal(user.id, id);
-      setGoals(financeService.getGoals(user.id));
+      await deleteDoc(doc(db, "goals", id));
     },
     [user]
   );
 
   const updateCards = useCallback(
-    (newCards: PaymentCard[]) => {
+    async (newCards: PaymentCard[]) => {
       if (!user) return;
-      financeService.saveCards(user.id, newCards);
+      await setDoc(doc(db, "cards", user.id), { cards: newCards });
       setCards(newCards);
     },
     [user]
   );
 
   const updatePreferences = useCallback(
-    (prefs: UserPreferences) => {
+    async (prefs: UserPreferences) => {
       if (!user) return;
-      financeService.savePreferences(user.id, prefs);
+      await setDoc(doc(db, "preferences", user.id), prefs);
       setPreferences(prefs);
     },
     [user]
