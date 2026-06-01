@@ -62,44 +62,6 @@ Acesse [console.firebase.google.com](https://console.firebase.google.com) e crie
 ### 3. Registre o app web
 No console do Firebase, clique em **Adicionar app** → ícone Web (`</>`).
 
-### 4. Configure as variáveis de ambiente
-
-Crie um arquivo `.env` na raiz do projeto:
-
-```env
-VITE_FIREBASE_API_KEY=sua_api_key
-VITE_FIREBASE_AUTH_DOMAIN=seu_projeto.firebaseapp.com
-VITE_FIREBASE_PROJECT_ID=seu_projeto_id
-VITE_FIREBASE_STORAGE_BUCKET=seu_projeto.firebasestorage.app
-VITE_FIREBASE_MESSAGING_SENDER_ID=seu_sender_id
-VITE_FIREBASE_APP_ID=seu_app_id
-```
-
-### 5. Atualize o arquivo de configuração
-
-Em `src/services/firebase.ts`, substitua os valores pelas variáveis de ambiente:
-
-```ts
-const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
-};
-```
-
-### 6. Adicione o `.env` ao `.gitignore`
-
-```bash
-echo ".env" >> .gitignore
-```
-
-> ⚠️ **Nunca suba suas credenciais do Firebase para o GitHub!**
-
----
-
 ## 🚀 Como Executar
 
 ```bash
