@@ -124,20 +124,26 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const highlights = useMemo(() => getHighlightCards(transactions, goals), [transactions, goals]);
 
   const addTransaction = useCallback(
-    async (data: Omit<Transaction, "id" | "history" | "createdAt" | "updatedAt">) => {
-      if (!user) return;
-      const now = new Date().toISOString();
-      await addDoc(collection(db, "transactions"), {
-      ...data,
+  async (data: Omit<Transaction, "id" | "history" | "createdAt" | "updatedAt">) => {
+    if (!user) return;
+    const now = new Date().toISOString();
+
+    // Remove campos undefined para o Firestore não reclamar
+    const cleanData = Object.fromEntries(
+      Object.entries(data).filter(([_, v]) => v !== undefined)
+    );
+
+    await addDoc(collection(db, "transactions"), {
+      ...cleanData,
       type: data.type ?? "expense",
       userId: user.id,
       history: [{ date: now, action: "created" }],
       createdAt: serverTimestamp(),
       updatedAt: now,
     });
-    },
-    [user]
-  );
+  },
+  [user]
+);
 
   const updateTransaction = useCallback(
     async (id: string, data: Partial<Transaction>) => {

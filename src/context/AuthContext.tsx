@@ -24,6 +24,7 @@ interface AuthUser {
   email: string;
   phone?: string;
   avatarInitials?: string;
+  photoURL?: string;
 }
 
 interface AuthContextValue {

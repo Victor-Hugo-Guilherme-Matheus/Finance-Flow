@@ -600,25 +600,6 @@ function HelpSupportScreen({ onBack }: { onBack: () => void }) {
         ))}
       </div>
 
-      <h3 className="ff-heading font-semibold mb-3">{t("profile.helpCenter")}</h3>
-      <div className="flex flex-wrap gap-2 mb-4">
-        {topics.map((topic) => (
-          <button
-            key={topic}
-            type="button"
-            onClick={() => setActiveTopic(activeTopic === topic ? null : topic)}
-            className={`px-4 py-2 rounded-full text-sm ${activeTopic === topic ? "ff-nav-active" : "ff-card-interactive"}`}
-          >
-            {t(`profile.helpTopics.${topic}`)}
-          </button>
-        ))}
-      </div>
-      {activeTopic && (
-        <div className="ff-card-lg p-4 mb-6">
-          <p className="ff-text-muted text-sm">{t(`profile.helpContent.${activeTopic}`)}</p>
-        </div>
-      )}
-
       <h3 className="ff-heading font-semibold mb-3">{t("profile.contact")}</h3>
       <div className="space-y-3">
         <input
