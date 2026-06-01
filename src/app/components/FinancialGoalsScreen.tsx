@@ -1,12 +1,14 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Target, TrendingUp, Calendar, Plus, Check, XCircle, Edit, Trash2 } from "lucide-react";
+import { Target, TrendingUp, Calendar, Plus, Check, XCircle, Edit, Trash2, X } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageContext";
 import { useFinance } from "../../context/FinanceContext";
 import type { Goal } from "../../types";
 import { formatCurrency, daysUntil } from "../../utils/format";
 import { EmptyState, LoadingSpinner } from "./shared/UiHelpers";
 import GoalFormModal from "./GoalFormModal";
+import AchievementToast from "./AchievementToast";
+import { checkAchievements, type Achievement } from "../../services/achievementService";
 
 const GOAL_NAME_KEYS = ["emergencyFund", "vacationBali", "newLaptop", "investmentPortfolio"];
 
@@ -15,12 +17,132 @@ function getGoalDisplayName(name: string, t: (key: string) => string) {
   return name;
 }
 
+interface AddFundsModalProps {
+  goal: Goal;
+  onClose: () => void;
+  onConfirm: (amount: number) => void;
+}
+
+function AddFundsModal({ goal, onClose, onConfirm }: AddFundsModalProps) {
+  const { t } = useLanguage();
+  const [amount, setAmount] = useState("");
+  const [error, setError] = useState("");
+
+  const handleConfirm = () => {
+    const value = parseFloat(amount);
+    if (isNaN(value) || value <= 0) {
+      setError("Digite um valor válido.");
+      return;
+    }
+    onConfirm(value);
+    onClose();
+  };
+
+  return (
+    <motion.div
+      className="fixed inset-0 z-50 flex items-center justify-center px-6"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+    >
+      <motion.div
+        className="absolute inset-0 backdrop-blur-sm"
+        style={{ backgroundColor: "var(--ff-overlay)" }}
+        onClick={onClose}
+      />
+      <motion.div
+        className="relative w-full max-w-sm ff-card-lg p-6 space-y-4"
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.9, opacity: 0 }}
+      >
+        <div className="flex items-center justify-between">
+          <h3 className="ff-heading text-lg font-semibold">{t("goals.addFunds")}</h3>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-8 h-8 rounded-full ff-card-interactive flex items-center justify-center"
+          >
+            <X className="w-4 h-4 ff-text" />
+          </button>
+        </div>
+
+        <div
+          className="flex items-center gap-3 p-3 rounded-2xl"
+          style={{ backgroundColor: `${goal.color}20` }}
+        >
+          <span className="text-2xl">{goal.icon}</span>
+          <div>
+            <p className="ff-text text-sm font-medium">{getGoalDisplayName(goal.name, () => "")}</p>
+            <p className="ff-text-muted text-xs">
+              {formatCurrency(goal.currentAmount)} / {formatCurrency(goal.targetAmount)}
+            </p>
+          </div>
+        </div>
+
+        <div>
+          <label className="ff-text-muted text-sm mb-2 block">{t("goals.addFundsPrompt")}</label>
+          <input
+            type="number"
+            value={amount}
+            onChange={(e) => { setAmount(e.target.value); setError(""); }}
+            className="ff-input px-4 py-3 text-xl font-semibold w-full"
+            placeholder="0.00"
+            min="0"
+            step="0.01"
+            autoFocus
+          />
+          {error && <p className="text-red-400 text-xs mt-1">{error}</p>}
+        </div>
+
+        <div className="flex gap-3 pt-2">
+          <motion.button
+            type="button"
+            onClick={onClose}
+            className="flex-1 ff-card-interactive py-3 rounded-2xl ff-text text-sm font-medium"
+            whileTap={{ scale: 0.97 }}
+          >
+            {t("common.cancel")}
+          </motion.button>
+          <motion.button
+            type="button"
+            onClick={handleConfirm}
+            className="flex-1 py-3 rounded-2xl text-white text-sm font-semibold"
+            style={{ backgroundColor: goal.color }}
+            whileTap={{ scale: 0.97 }}
+          >
+            {t("common.save")}
+          </motion.button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 export default function FinancialGoalsScreen() {
   const { t } = useLanguage();
   const { goals, isLoading, updateGoal, deleteGoal } = useFinance();
   const [showForm, setShowForm] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [activeTab, setActiveTab] = useState<"active" | "completed" | "closed">("active");
+  const [addFundsGoal, setAddFundsGoal] = useState<Goal | null>(null);
+  const [currentAchievement, setCurrentAchievement] = useState<Achievement | null>(null);
+  const [lastAchievement, setLastAchievement] = useState<Achievement | null>(null);
+  const achievementTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prevGoalsRef = useRef<Goal[]>(goals);
+
+  const showAchievementNotification = (achievement: Achievement) => {
+    if (achievementTimer.current) clearTimeout(achievementTimer.current);
+    setCurrentAchievement(achievement);
+    setLastAchievement(achievement);
+    achievementTimer.current = setTimeout(() => setCurrentAchievement(null), 4000);
+  };
+
+  const triggerAchievements = (updatedGoal?: Goal) => {
+  const unlocked = checkAchievements(prevGoalsRef.current, goals, updatedGoal);
+  prevGoalsRef.current = [...goals];
+  if (unlocked.length > 0) showAchievementNotification(unlocked[0]);
+};
 
   const activeGoals = goals.filter((g) => g.status === "active");
   const completedGoals = goals.filter((g) => g.status === "completed");
@@ -37,19 +159,18 @@ export default function FinancialGoalsScreen() {
   const totalCurrent = activeGoals.reduce((s, g) => s + g.currentAmount, 0);
   const totalProgress = totalTarget ? (totalCurrent / totalTarget) * 100 : 0;
 
-  const handleAddFunds = (goal: Goal) => {
-    const amountStr = window.prompt(t("goals.addFundsPrompt"));
-    if (!amountStr) return;
-    const amount = parseFloat(amountStr);
-    if (isNaN(amount) || amount <= 0) return;
-
+  const handleAddFunds = (goal: Goal, amount: number) => {
     const newCurrent = goal.currentAmount + amount;
     const status = newCurrent >= goal.targetAmount ? "completed" : goal.status;
+    const updatedGoal = { ...goal, currentAmount: newCurrent, status } as Goal;
     updateGoal(goal.id, { currentAmount: newCurrent, status });
+    triggerAchievements(updatedGoal);
   };
 
   const handleComplete = (goal: Goal) => {
+    const updatedGoal = { ...goal, status: "completed", currentAmount: goal.targetAmount } as Goal;
     updateGoal(goal.id, { status: "completed", currentAmount: goal.targetAmount });
+    triggerAchievements(updatedGoal);
   };
 
   const handleClose = (goal: Goal) => {
@@ -70,6 +191,11 @@ export default function FinancialGoalsScreen() {
 
   return (
     <div className="ff-page">
+      <AchievementToast
+        achievement={currentAchievement}
+        onClose={() => setCurrentAchievement(null)}
+      />
+
       <div className="p-6">
         <div className="flex items-center justify-between mb-8">
           <div>
@@ -79,6 +205,7 @@ export default function FinancialGoalsScreen() {
           <motion.button
             type="button"
             onClick={() => {
+              prevGoalsRef.current = goals;
               setEditingGoal(null);
               setShowForm(true);
             }}
@@ -118,7 +245,6 @@ export default function FinancialGoalsScreen() {
           </p>
         </div>
 
-        {/* Abas: ativas, concluídas, encerradas */}
         <div className="flex gap-2 mb-6 overflow-x-auto pb-1">
           {(["active", "completed", "closed"] as const).map((tab) => (
             <button
@@ -208,7 +334,7 @@ export default function FinancialGoalsScreen() {
                     <div className="grid grid-cols-2 gap-2">
                       <motion.button
                         type="button"
-                        onClick={() => handleAddFunds(goal)}
+                        onClick={() => setAddFundsGoal(goal)}
                         className="py-2 rounded-xl border text-sm"
                         style={{ borderColor: "var(--ff-border-strong)", color: "var(--ff-cyan)" }}
                         whileTap={{ scale: 0.98 }}
@@ -266,21 +392,51 @@ export default function FinancialGoalsScreen() {
           </div>
         )}
 
-        {activeGoals.length > 0 && (
-          <div
-            className="mt-6 ff-card-lg p-6"
+        {/* Card fixo de conquista */}
+        {goals.length > 0 && (
+          <motion.div
+            className="mt-6 mb-6 ff-card-lg p-5"
             style={{
-              background:
-                "linear-gradient(to bottom right, color-mix(in srgb, var(--ff-blue) 20%, var(--ff-surface)), color-mix(in srgb, var(--ff-cyan) 20%, var(--ff-surface)))",
+              background: "linear-gradient(to bottom right, color-mix(in srgb, var(--ff-blue) 20%, var(--ff-surface)), color-mix(in srgb, var(--ff-cyan) 20%, var(--ff-surface)))",
+              border: "1px solid color-mix(in srgb, var(--ff-cyan) 30%, transparent)",
             }}
+            animate={{ opacity: 1 }}
+            initial={{ opacity: 0 }}
           >
-            <div className="flex items-center gap-3 mb-3">
-              <TrendingUp className="w-5 h-5" style={{ color: "var(--ff-cyan)" }} />
-              <h3 className="ff-heading font-semibold">{t("goals.achievementTitle")}</h3>
-            </div>
-            <p className="ff-text-muted text-sm mb-4">{t("goals.achievementBody")}</p>
-            <span style={{ color: "var(--ff-warning)" }}>🏆 {t("goals.badge")}</span>
-          </div>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={lastAchievement?.id ?? "default"}
+                className="flex items-start gap-3"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+              >
+                <div
+                  className="w-12 h-12 rounded-full flex items-center justify-center text-2xl flex-shrink-0"
+                  style={{ backgroundColor: "color-mix(in srgb, var(--ff-cyan) 20%, transparent)" }}
+                >
+                  {lastAchievement ? lastAchievement.icon : "🏆"}
+                </div>
+                <div>
+                  {lastAchievement ? (
+                    <>
+                      <p className="ff-text-muted text-xs mb-1">🎉 Conquista desbloqueada!</p>
+                      <p className="ff-heading font-semibold">{lastAchievement.title}</p>
+                      <p className="ff-text-muted text-sm mt-1">{lastAchievement.description}</p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="ff-heading font-semibold">{t("goals.achievementTitle")}</p>
+                      <p className="ff-text-muted text-sm mt-1">{t("goals.achievementBody")}</p>
+                      <span className="text-sm mt-2 block" style={{ color: "var(--ff-warning)" }}>
+                        🥇 {t("goals.badge")}
+                      </span>
+                    </>
+                  )}
+                </div>
+              </motion.div>
+            </AnimatePresence>
+          </motion.div>
         )}
       </div>
 
@@ -291,7 +447,15 @@ export default function FinancialGoalsScreen() {
             onClose={() => {
               setShowForm(false);
               setEditingGoal(null);
+              triggerAchievements();
             }}
+          />
+        )}
+        {addFundsGoal && (
+          <AddFundsModal
+            goal={addFundsGoal}
+            onClose={() => setAddFundsGoal(null)}
+            onConfirm={(amount) => handleAddFunds(addFundsGoal, amount)}
           />
         )}
       </AnimatePresence>

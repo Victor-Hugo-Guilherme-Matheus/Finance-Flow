@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import {
   User,
   Bell,
@@ -11,6 +11,9 @@ import {
   LogOut,
   ChevronRight,
   Languages,
+  ArrowLeftRight,
+  Camera,
+  Trash2,
 } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageContext";
 import { useTheme } from "../../theme/ThemeContext";
@@ -19,6 +22,7 @@ import { useFinance } from "../../context/FinanceContext";
 import type { Locale } from "../../i18n/translations";
 import { formatCurrency } from "../../utils/format";
 import ProfileSubScreens, { type ProfileSubView } from "./ProfileSubScreens";
+import CurrencyConverter from "./CurrencyConverter";
 
 interface ProfileScreenProps {
   onLogout: () => void;
@@ -29,6 +33,7 @@ const menuItems = [
   { id: "notifications", icon: Bell, labelKey: "profile.notifications", color: "#5b6bf5", badge: "3" },
   { id: "security", icon: Lock, labelKey: "profile.security", color: "#ff6b9d" },
   { id: "payment", icon: CreditCard, labelKey: "profile.paymentMethods", color: "#ffd93d" },
+  { id: "converter", icon: ArrowLeftRight, labelKey: "profile.currencyConverter", color: "#00d4aa" },
   { id: "export", icon: FileText, labelKey: "profile.exportReport", color: "#079697" },
   { id: "help", icon: HelpCircle, labelKey: "profile.help", color: "#5b6bf5" },
 ] as const;
@@ -108,9 +113,11 @@ function DarkModeToggle() {
 
 export default function ProfileScreen({ onLogout }: ProfileScreenProps) {
   const { t } = useLanguage();
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const { goals, dashboardStats } = useFinance();
-  const [subView, setSubView] = useState<ProfileSubView>(null);
+  const [subView, setSubView] = useState<ProfileSubView | "converter">(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [showRemoveModal, setShowRemoveModal] = useState(false);
 
   const activeGoals = goals.filter((g) => g.status === "active");
   const avgProgress =
@@ -118,6 +125,51 @@ export default function ProfileScreen({ onLogout }: ProfileScreenProps) {
       ? activeGoals.reduce((s, g) => s + (g.currentAmount / g.targetAmount) * 100, 0) /
         activeGoals.length
       : 0;
+
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    setUploadingPhoto(true);
+    try {
+      const { uploadProfilePhoto } = await import("../../services/profilePhotoService");
+      await uploadProfilePhoto(user.id, file);
+      await refreshUser();
+    } catch {
+      alert("Erro ao atualizar foto.");
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
+  const handleRemovePhoto = async () => {
+    if (!user) return;
+    try {
+      const { doc, updateDoc } = await import("firebase/firestore");
+      const { db } = await import("../../services/firebase");
+      await updateDoc(doc(db, "users", user.id), { photoURL: "" });
+      await refreshUser();
+      setShowRemoveModal(false);
+    } catch {
+      alert("Erro ao remover foto.");
+    }
+  };
+
+  if (subView === "converter") {
+    return (
+      <div className="ff-page">
+        <div className="p-6">
+          <button
+            type="button"
+            onClick={() => setSubView(null)}
+            className="flex items-center gap-2 mb-6 ff-text-muted text-sm"
+          >
+            ← Voltar
+          </button>
+          <CurrencyConverter />
+        </div>
+      </div>
+    );
+  }
 
   if (subView) {
     return <ProfileSubScreens view={subView} onBack={() => setSubView(null)} />;
@@ -130,8 +182,45 @@ export default function ProfileScreen({ onLogout }: ProfileScreenProps) {
 
         <motion.div className="ff-card-lg p-6 mb-6" whileHover={{ scale: 1.01 }}>
           <div className="flex items-center gap-4">
-            <div className="w-20 h-20 rounded-full ff-avatar flex items-center justify-center text-2xl font-bold flex-shrink-0">
-              {user?.avatarInitials ?? "?"}
+            <div className="flex flex-col items-center gap-1">
+              <label className="relative cursor-pointer flex-shrink-0">
+                <div className="w-20 h-20 rounded-full ff-avatar flex items-center justify-center text-2xl font-bold overflow-hidden">
+                  {uploadingPhoto ? (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    </div>
+                  ) : user?.photoURL ? (
+                    <img src={user.photoURL} alt="Foto de perfil" className="w-full h-full object-cover" />
+                  ) : (
+                    user?.avatarInitials ?? "?"
+                  )}
+                </div>
+                <div
+                  className="absolute bottom-0 right-0 w-7 h-7 rounded-full flex items-center justify-center shadow-lg"
+                  style={{ backgroundColor: "var(--ff-cyan)" }}
+                >
+                  <Camera className="w-4 h-4 text-white" />
+                </div>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handlePhotoChange}
+                />
+              </label>
+              {user?.photoURL && (
+                <motion.button
+                  type="button"
+                  onClick={() => setShowRemoveModal(true)}
+                  className="flex items-center gap-1 text-xs mt-1"
+                  style={{ color: "var(--ff-expense)", cursor: "pointer" }}
+                  whileHover={{ scale: 1.08 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <Trash2 className="w-3 h-3" />
+                  Remover
+                </motion.button>
+              )}
             </div>
             <div className="flex-1">
               <h3 className="ff-heading text-xl">{user?.fullName ?? ""}</h3>
@@ -156,17 +245,21 @@ export default function ProfileScreen({ onLogout }: ProfileScreenProps) {
 
         <div className="grid grid-cols-3 gap-3 mb-6">
           <div className="ff-card-lg p-4 text-center">
-            <p className="ff-heading text-xl font-bold">{activeGoals.length}</p>
+            <p className="ff-heading font-bold" style={{ fontSize: "clamp(0.75rem, 3vw, 1.25rem)" }}>
+              {activeGoals.length}
+            </p>
             <p className="ff-text-muted text-xs mt-1">{t("profile.statGoals")}</p>
           </div>
           <div className="ff-card-lg p-4 text-center">
-            <p className="ff-heading text-xl font-bold">
-              {formatCurrency(dashboardStats.accumulatedSavings)}
-            </p>
+           <p className="ff-heading font-bold text-center" style={{ fontSize: "clamp(0.45rem, 2vw, 1rem)", whiteSpace: "nowrap" }}>
+            {formatCurrency(dashboardStats.accumulatedSavings)}
+          </p>
             <p className="ff-text-muted text-xs mt-1">{t("profile.statSaved")}</p>
           </div>
           <div className="ff-card-lg p-4 text-center">
-            <p className="ff-heading text-xl font-bold">{avgProgress.toFixed(0)}%</p>
+            <p className="ff-heading font-bold" style={{ fontSize: "clamp(0.75rem, 3vw, 1.25rem)" }}>
+              {avgProgress.toFixed(0)}%
+            </p>
             <p className="ff-text-muted text-xs mt-1">{t("profile.statProgress")}</p>
           </div>
         </div>
@@ -183,7 +276,7 @@ export default function ProfileScreen({ onLogout }: ProfileScreenProps) {
               <motion.button
                 key={item.id}
                 type="button"
-                onClick={() => setSubView(item.id as ProfileSubView)}
+                onClick={() => setSubView(item.id as ProfileSubView | "converter")}
                 className="w-full ff-card-interactive p-4 flex items-center gap-4"
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -234,6 +327,62 @@ export default function ProfileScreen({ onLogout }: ProfileScreenProps) {
           <p className="ff-text-faint text-xs mt-1">{t("profile.rights")}</p>
         </div>
       </div>
+
+      {/* Modal remover foto */}
+      <AnimatePresence>
+        {showRemoveModal && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-center justify-center px-6"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className="absolute inset-0 backdrop-blur-sm"
+              style={{ backgroundColor: "var(--ff-overlay)" }}
+              onClick={() => setShowRemoveModal(false)}
+            />
+            <motion.div
+              className="relative w-full max-w-sm ff-card-lg p-6 space-y-4"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+            >
+              <div className="flex justify-center mb-2">
+                <div
+                  className="w-14 h-14 rounded-full flex items-center justify-center"
+                  style={{ backgroundColor: "color-mix(in srgb, var(--ff-expense) 20%, transparent)" }}
+                >
+                  <Trash2 className="w-7 h-7" style={{ color: "var(--ff-expense)" }} />
+                </div>
+              </div>
+              <h3 className="ff-heading text-lg font-semibold text-center">Remover foto</h3>
+              <p className="ff-text-muted text-sm text-center">
+                Deseja remover sua foto de perfil? As iniciais serão exibidas no lugar.
+              </p>
+              <div className="flex gap-3 pt-2">
+                <motion.button
+                  type="button"
+                  onClick={() => setShowRemoveModal(false)}
+                  className="flex-1 ff-card-interactive py-3 rounded-2xl ff-text text-sm font-medium"
+                  whileTap={{ scale: 0.97 }}
+                >
+                  Cancelar
+                </motion.button>
+                <motion.button
+                  type="button"
+                  onClick={handleRemovePhoto}
+                  className="flex-1 py-3 rounded-2xl text-white text-sm font-semibold"
+                  style={{ backgroundColor: "var(--ff-expense)" }}
+                  whileTap={{ scale: 0.97 }}
+                >
+                  Remover
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

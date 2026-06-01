@@ -6,7 +6,7 @@ import { useFinance } from "../../context/FinanceContext";
 import type { Goal } from "../../types";
 import { GOAL_CATEGORIES, CATEGORY_COLORS, CATEGORY_ICONS } from "../../utils/constants";
 import { validateAmount, validateRequired } from "../../utils/validation";
-import { AlertMessage, FormField } from "./shared/UiHelpers";
+import { AlertMessage, FormField, CustomSelect } from "./shared/UiHelpers";
 
 interface GoalFormModalProps {
   goal?: Goal | null;
@@ -118,17 +118,14 @@ export default function GoalFormModal({ goal, onClose }: GoalFormModalProps) {
             </FormField>
 
             <FormField label={t("goals.form.category")}>
-              <select
+              <CustomSelect
                 value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="ff-input px-4 py-3"
-              >
-                {GOAL_CATEGORIES.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {t(`goalCategories.${cat}`)}
-                  </option>
-                ))}
-              </select>
+                onChange={setCategory}
+                options={GOAL_CATEGORIES.map((cat) => ({
+                  value: cat,
+                  label: t(`goalCategories.${cat}`),
+                }))}
+              />
             </FormField>
 
             {error && <AlertMessage type="error" message={error} />}

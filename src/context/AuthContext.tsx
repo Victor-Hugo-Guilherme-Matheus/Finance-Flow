@@ -6,9 +6,26 @@ import {
   useCallback,
   type ReactNode,
 } from "react";
-import { authService } from "../services/dataService";
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+  updatePassword,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+} from "firebase/auth";
+import { doc, setDoc, getDoc, updateDoc } from "firebase/firestore";
+import { auth, db } from "../services/firebase";
 
-type AuthUser = NonNullable<ReturnType<typeof authService.getCurrentUser>>;
+interface AuthUser {
+  id: string;
+  fullName: string;
+  email: string;
+  phone?: string;
+  avatarInitials?: string;
+  photoURL?: string;
+}
 
 interface AuthContextValue {
   user: AuthUser | null;
@@ -36,33 +53,58 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const refreshUser = useCallback(() => {
-    setUser(authService.getCurrentUser());
+  const refreshUser = useCallback(async () => {
+    const firebaseUser = auth.currentUser;
+    if (!firebaseUser) return;
+    const docSnap = await getDoc(doc(db, "users", firebaseUser.uid));
+    if (docSnap.exists()) {
+      setUser({ id: firebaseUser.uid, ...docSnap.data() } as AuthUser);
+    }
   }, []);
 
   useEffect(() => {
-    const sessionId = authService.getSession();
-    if (sessionId) {
-      const current = authService.getCurrentUser();
-      if (current) setUser(current);
-    }
-    setIsLoading(false);
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        const docSnap = await getDoc(doc(db, "users", firebaseUser.uid));
+        if (docSnap.exists()) {
+          setUser({ id: firebaseUser.uid, ...docSnap.data() } as AuthUser);
+        }
+      } else {
+        setUser(null);
+      }
+      setIsLoading(false);
+    });
+    return () => unsubscribe();
   }, []);
 
   const login = async (email: string, password: string) => {
-    const result = authService.login(email, password);
-    if (result.success) setUser(result.user);
-    return result;
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      return { success: true };
+    } catch {
+      return { success: false, error: "auth.invalidCredentials" };
+    }
   };
 
   const register = async (data: { fullName: string; email: string; password: string }) => {
-    const result = authService.register(data);
-    if (result.success) setUser(result.user);
-    return result;
+    try {
+      const { user: firebaseUser } = await createUserWithEmailAndPassword(auth, data.email, data.password);
+      const userData = {
+        fullName: data.fullName.trim(),
+        email: data.email.trim().toLowerCase(),
+        phone: "",
+        avatarInitials: data.fullName.trim().split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2),
+      };
+      await setDoc(doc(db, "users", firebaseUser.uid), userData);
+      setUser({ id: firebaseUser.uid, ...userData });
+      return { success: true };
+    } catch {
+      return { success: false, error: "auth.registerFailed" };
+    }
   };
 
   const logout = () => {
-    authService.logout();
+    signOut(auth);
     setUser(null);
   };
 
@@ -70,28 +112,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     data: Partial<{ fullName: string; email: string; phone: string; avatarInitials: string }>
   ) => {
     if (!user) return { success: false, error: "auth.userNotFound" };
-    const result = authService.updateProfile(user.id, data);
-    if (result.success) setUser(result.user);
-    return result;
+    try {
+      await updateDoc(doc(db, "users", user.id), data);
+      setUser({ ...user, ...data });
+      return { success: true };
+    } catch {
+      return { success: false, error: "auth.updateFailed" };
+    }
   };
 
   const changePassword = async (current: string, newPassword: string) => {
-    if (!user) return { success: false, error: "auth.userNotFound" };
-    return authService.changePassword(user.id, current, newPassword);
+    const firebaseUser = auth.currentUser;
+    if (!firebaseUser || !firebaseUser.email) return { success: false, error: "auth.userNotFound" };
+    try {
+      const credential = EmailAuthProvider.credential(firebaseUser.email, current);
+     await reauthenticateWithCredential(firebaseUser, credential);
+      await updatePassword(firebaseUser, newPassword);
+      return { success: true };
+    } catch {
+      return { success: false, error: "auth.wrongPassword" };
+    }
   };
 
   return (
     <AuthContext.Provider
-      value={{
-        user,
-        isLoading,
-        login,
-        register,
-        logout,
-        updateProfile,
-        changePassword,
-        refreshUser,
-      }}
+      value={{ user, isLoading, login, register, logout, updateProfile, changePassword, refreshUser }}
     >
       {children}
     </AuthContext.Provider>

@@ -4,8 +4,7 @@ import { X } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageContext";
 import { useFinance } from "../../context/FinanceContext";
 import type { Transaction, TransactionType } from "../../types";
-import { validateAmount, validateRequired } from "../../utils/validation";
-import { AlertMessage, FormField } from "./shared/UiHelpers";
+import { AlertMessage, FormField, CustomSelect } from "./shared/UiHelpers";
 
 const CATEGORIES = ["food", "transport", "shopping", "bills", "entertainment", "health", "income", "savings", "other"];
 const PAYMENT_METHODS = ["creditCard", "debitCard", "cash", "digitalWallet"];
@@ -35,17 +34,29 @@ export default function TransactionFormModal({
   );
   const [paymentMethod, setPaymentMethod] = useState(transaction?.paymentMethod ?? "");
   const [notes, setNotes] = useState(transaction?.notes ?? "");
-  const [error, setError] = useState("");
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const handleSave = () => {
-    const nameError = validateRequired(name, "validation.nameRequired");
-    const amountError = validateAmount(amount);
-    const categoryError = !category ? "validation.categoryRequired" : null;
+  const categoryOptions = CATEGORIES.map((cat) => ({
+    value: cat,
+    label: t(`categories.${cat}`),
+  }));
 
-    if (nameError || amountError || categoryError) {
-      setError(t(nameError ?? amountError ?? categoryError!));
-      return;
-    }
+  const paymentOptions = PAYMENT_METHODS.map((m) => ({
+    value: m,
+    label: t(`payment.${m}`),
+  }));
+
+  const validate = () => {
+    const newErrors: Record<string, string> = {};
+    if (!name.trim()) newErrors.name = "Nome é obrigatório";
+    if (!amount || parseFloat(amount) <= 0) newErrors.amount = "Valor deve ser maior que zero";
+    if (!category) newErrors.category = "Selecione uma categoria";
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSave = async () => {
+    if (!validate()) return;
 
     const data = {
       name: name.trim(),
@@ -58,13 +69,21 @@ export default function TransactionFormModal({
       notes: notes.trim() || undefined,
     };
 
-    if (isEditing && transaction) {
-      updateTransaction(transaction.id, data);
-    } else {
-      addTransaction(data);
+    try {
+      if (isEditing && transaction) {
+        await updateTransaction(transaction.id, data);
+      } else {
+        await addTransaction(data);
+      }
+      onClose();
+    } catch (err) {
+      console.error("Erro ao salvar transação:", err);
+      setErrors({ name: "Erro ao salvar. Tente novamente." });
     }
-    onClose();
   };
+
+  const inputClass = (field: string) =>
+    `ff-input px-4 py-3 ${errors[field] ? "border border-red-400" : ""}`;
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center">
@@ -113,40 +132,38 @@ export default function TransactionFormModal({
               </div>
             </FormField>
 
-            <FormField label={t("transactions.form.name")}>
+            <FormField label={<span>{t("transactions.form.name")} <span className="text-red-400">*</span></span>}>
               <input
                 value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="ff-input px-4 py-3"
+                onChange={(e) => { setName(e.target.value); setErrors((p) => ({ ...p, name: "" })); }}
+                className={inputClass("name")}
                 placeholder={t("transactions.form.namePlaceholder")}
               />
+              {errors.name && <p className="text-red-400 text-xs mt-1">{errors.name}</p>}
             </FormField>
 
-            <FormField label={t("transactions.form.amount")}>
+            <FormField label={<span>{t("transactions.form.amount")} <span className="text-red-400">*</span></span>}>
               <input
                 type="number"
                 value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                className="ff-input px-4 py-3"
+                onChange={(e) => { setAmount(e.target.value); setErrors((p) => ({ ...p, amount: "" })); }}
+                className={inputClass("amount")}
                 placeholder="0.00"
                 min="0"
                 step="0.01"
               />
+              {errors.amount && <p className="text-red-400 text-xs mt-1">{errors.amount}</p>}
             </FormField>
 
-            <FormField label={t("transactions.form.category")}>
-              <select
+            <FormField label={<span>{t("transactions.form.category")} <span className="text-red-400">*</span></span>}>
+              <CustomSelect
                 value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="ff-input px-4 py-3"
-              >
-                <option value="">{t("transactions.form.selectCategory")}</option>
-                {CATEGORIES.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {t(`categories.${cat}`)}
-                  </option>
-                ))}
-              </select>
+                onChange={(v) => { setCategory(v); setErrors((p) => ({ ...p, category: "" })); }}
+                options={categoryOptions}
+                placeholder={t("transactions.form.selectCategory")}
+                hasError={!!errors.category}
+              />
+              {errors.category && <p className="text-red-400 text-xs mt-1">{errors.category}</p>}
             </FormField>
 
             <FormField label={t("transactions.form.date")}>
@@ -158,7 +175,7 @@ export default function TransactionFormModal({
               />
             </FormField>
 
-            <FormField label={t("transactions.form.description")}>
+            <FormField label={`${t("transactions.form.description")} (opcional)`}>
               <input
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
@@ -166,22 +183,16 @@ export default function TransactionFormModal({
               />
             </FormField>
 
-            <FormField label={t("addExpense.paymentMethod")}>
-              <select
+            <FormField label={`${t("addExpense.paymentMethod")} (opcional)`}>
+              <CustomSelect
                 value={paymentMethod}
-                onChange={(e) => setPaymentMethod(e.target.value)}
-                className="ff-input px-4 py-3"
-              >
-                <option value="">{t("transactions.form.optional")}</option>
-                {PAYMENT_METHODS.map((m) => (
-                  <option key={m} value={m}>
-                    {t(`payment.${m}`)}
-                  </option>
-                ))}
-              </select>
+                onChange={setPaymentMethod}
+                options={paymentOptions}
+                placeholder={t("transactions.form.optional")}
+              />
             </FormField>
 
-            <FormField label={t("transactions.form.notes")}>
+            <FormField label={`${t("transactions.form.notes")} (opcional)`}>
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
@@ -189,8 +200,6 @@ export default function TransactionFormModal({
                 rows={3}
               />
             </FormField>
-
-            {error && <AlertMessage type="error" message={error} />}
 
             <motion.button
               type="button"

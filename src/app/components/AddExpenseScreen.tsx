@@ -2,9 +2,8 @@ import { useState } from "react";
 import { motion } from "motion/react";
 import { X, DollarSign, Calendar, CreditCard, Tag } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageContext";
-import { useFinance } from "../../context/FinanceContext";
-import { validateAmount, validateRequired } from "../../utils/validation";
-import { AlertMessage, FormField } from "./shared/UiHelpers";
+import { auth, db } from "../../services/firebase";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 
 interface AddExpenseScreenProps {
   onClose: () => void;
@@ -26,38 +25,45 @@ const paymentMethods = [
   { key: "digitalWallet", icon: "📱" },
 ] as const;
 
-/** Tela legada de despesa — persiste via FinanceContext */
 export default function AddExpenseScreen({ onClose }: AddExpenseScreenProps) {
   const { t } = useLanguage();
-  const { addTransaction } = useFinance();
   const [amount, setAmount] = useState("");
-  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedPayment, setSelectedPayment] = useState("");
-  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+  const [date, setDate] = useState("");
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleSave = () => {
-    const nameError = validateRequired(name || "Despesa", "validation.nameRequired");
-    const amountError = validateAmount(amount);
-    if (!selectedCategory) {
-      setError(t("validation.categoryRequired"));
-      return;
-    }
-    if (nameError || amountError) {
-      setError(t(nameError ?? amountError!));
+  const handleSave = async () => {
+    if (!amount || !selectedCategory || !selectedPayment || !date) {
+      setError("Preencha todos os campos.");
       return;
     }
 
-    addTransaction({
-      name: name || t("addExpense.title"),
-      amount: parseFloat(amount),
-      type: "expense",
-      category: selectedCategory,
-      date,
-      paymentMethod: selectedPayment || undefined,
-    });
-    onClose();
+    setLoading(true);
+    setError("");
+
+    try {
+      const user = auth.currentUser;
+      if (!user) throw new Error("Usuário não autenticado.");
+
+      await addDoc(collection(db, "transactions"), {
+        userId: user.uid,
+        amount: parseFloat(amount) * -1,
+        description,
+        category: selectedCategory,
+        paymentMethod: selectedPayment,
+        date,
+        createdAt: serverTimestamp(),
+      });
+
+      onClose();
+    } catch (err) {
+      setError("Erro ao salvar. Tente novamente.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -93,16 +99,8 @@ export default function AddExpenseScreen({ onClose }: AddExpenseScreenProps) {
           </div>
 
           <div className="space-y-6">
-            <FormField label={t("transactions.form.name")}>
-              <input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder={t("transactions.form.namePlaceholder")}
-                className="ff-input px-4 py-4"
-              />
-            </FormField>
-
-            <FormField label={t("addExpense.amount")}>
+            <div>
+              <label className="ff-text-muted text-sm mb-2 block">{t("addExpense.amount")}</label>
               <div className="relative">
                 <div className="absolute left-4 top-1/2 -translate-y-1/2">
                   <DollarSign className="w-5 h-5" style={{ color: "var(--ff-cyan)" }} />
@@ -115,7 +113,18 @@ export default function AddExpenseScreen({ onClose }: AddExpenseScreenProps) {
                   className="ff-input px-12 py-4 text-2xl font-semibold"
                 />
               </div>
-            </FormField>
+            </div>
+
+            <div>
+              <label className="ff-text-muted text-sm mb-2 block">Descrição</label>
+              <input
+                type="text"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Ex: Almoço, Uber..."
+                className="ff-input px-4 py-4"
+              />
+            </div>
 
             <div>
               <label className="ff-text-muted text-sm mb-2 flex items-center gap-2">
@@ -126,7 +135,6 @@ export default function AddExpenseScreen({ onClose }: AddExpenseScreenProps) {
                 {categories.map((cat) => (
                   <motion.button
                     key={cat.key}
-                    type="button"
                     onClick={() => setSelectedCategory(cat.key)}
                     className={`p-4 rounded-2xl border transition-all ${
                       selectedCategory === cat.key ? "ff-card-lg" : "ff-card-interactive"
@@ -135,8 +143,7 @@ export default function AddExpenseScreen({ onClose }: AddExpenseScreenProps) {
                       selectedCategory === cat.key
                         ? {
                             borderColor: "var(--ff-cyan)",
-                            backgroundColor:
-                              "color-mix(in srgb, var(--ff-cyan) 15%, var(--ff-surface))",
+                            backgroundColor: "color-mix(in srgb, var(--ff-cyan) 15%, var(--ff-surface))",
                           }
                         : undefined
                     }
@@ -158,7 +165,6 @@ export default function AddExpenseScreen({ onClose }: AddExpenseScreenProps) {
                 {paymentMethods.map((method) => (
                   <motion.button
                     key={method.key}
-                    type="button"
                     onClick={() => setSelectedPayment(method.key)}
                     className={`w-full p-4 rounded-2xl border flex items-center gap-3 transition-all ${
                       selectedPayment === method.key ? "ff-card-lg" : "ff-card-interactive"
@@ -167,8 +173,7 @@ export default function AddExpenseScreen({ onClose }: AddExpenseScreenProps) {
                       selectedPayment === method.key
                         ? {
                             borderColor: "var(--ff-cyan)",
-                            backgroundColor:
-                              "color-mix(in srgb, var(--ff-cyan) 15%, var(--ff-surface))",
+                            backgroundColor: "color-mix(in srgb, var(--ff-cyan) 15%, var(--ff-surface))",
                           }
                         : undefined
                     }
@@ -181,26 +186,30 @@ export default function AddExpenseScreen({ onClose }: AddExpenseScreenProps) {
               </div>
             </div>
 
-            <FormField label={t("addExpense.date")}>
-              <div className="relative">
-                <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 ff-text-faint" />
-                <input
-                  type="date"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  className="ff-input px-12 py-4"
-                />
-              </div>
-            </FormField>
+            <div>
+              <label className="ff-text-muted text-sm mb-2 flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
+                {t("addExpense.date")}
+              </label>
+              <input
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="ff-input px-4 py-4"
+              />
+            </div>
 
-            {error && <AlertMessage type="error" message={error} />}
+            {error && (
+              <p className="text-red-400 text-sm text-center">{error}</p>
+            )}
 
             <motion.button
               onClick={handleSave}
+              disabled={loading}
               className="w-full ff-btn-primary px-6 py-4"
               whileTap={{ scale: 0.98 }}
             >
-              {t("addExpense.save")}
+              {loading ? "Salvando..." : t("addExpense.save")}
             </motion.button>
           </div>
         </div>
