@@ -212,9 +212,8 @@ function createSeedCards(userId: string): PaymentCard[] {
     {
       id: generateId(),
       name: "Nubank",
-      number: "4111111111111111",
+      lastDigits: "1111",
       expiry: "12/28",
-      cvv: "123",
       brand: "visa",
       holderName: "Victor Hugo",
       type: "credit",

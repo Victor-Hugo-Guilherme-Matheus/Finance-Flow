@@ -64,9 +64,9 @@ export interface User {
 export interface PaymentCard {
   id: string;
   name: string;
-  number: string;
+  /** Apenas os 4 últimos dígitos. Número completo e CVV nunca são armazenados. */
+  lastDigits: string;
   expiry: string;
-  cvv: string;
   brand: CardBrand;
   holderName: string;
   type: CardType;

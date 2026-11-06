@@ -29,6 +29,7 @@ import {
   computeMonthlyComparison,
   getHighlightCards,
 } from "../utils/dashboard";
+import { toSafeCard } from "../utils/validation";
 import { useAuth } from "./AuthContext";
 
 interface FinanceContextValue {
@@ -203,8 +204,10 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const updateCards = useCallback(
     async (newCards: PaymentCard[]) => {
       if (!user) return;
-      await setDoc(doc(db, "cards", user.id), { cards: newCards });
-      setCards(newCards);
+      // Garante que nenhum número completo ou CVV chegue ao Firestore
+      const safeCards = newCards.map((card) => toSafeCard({ ...card }));
+      await setDoc(doc(db, "cards", user.id), { cards: safeCards });
+      setCards(safeCards);
     },
     [user]
   );
