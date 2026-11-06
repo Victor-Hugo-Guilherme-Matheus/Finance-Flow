@@ -1,1 +1,11 @@
 node_modules
+
+# Variáveis de ambiente (chaves do Firebase)
+.env
+.env.local
+.env.*.local
+
+# Firebase CLI
+.firebase/
+firebase-debug.log
+firestore-debug.log

@@ -1,0 +1,63 @@
+rules_version = '2';
+
+// Regras de segurança do FinanceFlow.
+// Cada usuário só pode ler e alterar os próprios dados.
+// Publicar com: firebase deploy --only firestore:rules
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    // O dono do documento não pode ser trocado numa atualização
+    function keepsOwner() {
+      return request.resource.data.userId == resource.data.userId;
+    }
+
+    // Perfil do usuário: documento com o mesmo id do uid
+    match /users/{uid} {
+      allow read, create, update, delete: if isOwner(uid);
+    }
+
+    // Preferências e cartões: um documento por usuário (id = uid)
+    match /preferences/{uid} {
+      allow read, write: if isOwner(uid);
+    }
+
+    match /cards/{uid} {
+      allow read, write: if isOwner(uid);
+    }
+
+    // Transações: cada documento guarda o uid do dono no campo userId
+    match /transactions/{transactionId} {
+      allow read, delete: if isOwner(resource.data.userId);
+      allow create: if isOwner(request.resource.data.userId)
+        && request.resource.data.amount is number;
+      allow update: if isOwner(resource.data.userId)
+        && keepsOwner()
+        && request.resource.data.amount is number;
+    }
+
+    // Metas: mesma lógica das transações
+    match /goals/{goalId} {
+      allow read, delete: if isOwner(resource.data.userId);
+      allow create: if isOwner(request.resource.data.userId)
+        && request.resource.data.targetAmount is number
+        && request.resource.data.currentAmount is number;
+      allow update: if isOwner(resource.data.userId)
+        && keepsOwner()
+        && request.resource.data.targetAmount is number
+        && request.resource.data.currentAmount is number;
+    }
+
+    // Qualquer outra coleção fica bloqueada
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

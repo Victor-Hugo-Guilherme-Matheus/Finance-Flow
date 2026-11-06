@@ -57,10 +57,27 @@ Acesse [console.firebase.google.com](https://console.firebase.google.com) e crie
 
 ### 2. Ative os serviços
 - **Authentication** → Email/senha
-- **Firestore Database** → Modo de teste → Região: `southamerica-east1`
+- **Firestore Database** → Modo de produção → Região: `southamerica-east1`
 
-### 3. Registre o app web
+### 3. Registre o app web e configure o `.env`
 No console do Firebase, clique em **Adicionar app** → ícone Web (`</>`).
+
+Copie o arquivo de exemplo e preencha com os dados exibidos na configuração do SDK:
+
+```bash
+cp .env.example .env
+```
+
+O arquivo `.env` não é enviado ao GitHub. Se publicar o app (Vercel, Netlify etc.), cadastre as mesmas variáveis `VITE_FIREBASE_*` no painel da hospedagem.
+
+### 4. Publique as regras de segurança
+As regras em `firestore.rules` garantem que cada usuário só acesse os próprios dados. Para publicá-las (junto com os índices do Firestore):
+
+```bash
+npm install -g firebase-tools
+firebase login
+firebase deploy --only firestore
+```
 
 ## 🚀 Como Executar
 
