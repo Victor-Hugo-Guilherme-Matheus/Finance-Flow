@@ -2,14 +2,26 @@ import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
+// As chaves vêm do arquivo .env (veja .env.example)
 const firebaseConfig = {
-  apiKey: "AIzaSyBK9Uv0sQnRJr23_o2JYKPv2SWxlT5cFOw",
-  authDomain: "financeflow-2f2f5.firebaseapp.com",
-  projectId: "financeflow-2f2f5",
-  storageBucket: "financeflow-2f2f5.firebasestorage.app",
-  messagingSenderId: "342761107376",
-  appId: "1:342761107376:web:d82b6205b957774ae7f075"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
+
+const missing = Object.entries(firebaseConfig)
+  .filter(([, value]) => !value)
+  .map(([key]) => key);
+
+if (missing.length > 0) {
+  throw new Error(
+    `Configuração do Firebase incompleta (${missing.join(", ")}). ` +
+      "Copie .env.example para .env e preencha as variáveis VITE_FIREBASE_*."
+  );
+}
 
 const app = initializeApp(firebaseConfig);
 
