@@ -8,8 +8,9 @@ import type { PaymentCard, UserPreferences } from "../../types";
 import { exportToCSV, exportToPDF } from "../../utils/exportReport";
 import { formatCurrency } from "../../utils/format";
 import {
-  detectCardBrand,
   maskCardNumber,
+  validateCardExpiry,
+  validateCardLastDigits,
   validateEmail,
   validatePassword,
   validatePhone,
@@ -322,33 +323,43 @@ function PaymentMethodsScreen({ onBack }: { onBack: () => void }) {
   const { cards, updateCards } = useFinance();
   const [showForm, setShowForm] = useState(false);
   const [editingCard, setEditingCard] = useState<PaymentCard | null>(null);
-  const [form, setForm] = useState({
+  const emptyForm = {
     name: "",
-    number: "",
+    lastDigits: "",
     expiry: "",
-    cvv: "",
+    brand: "visa" as PaymentCard["brand"],
     holderName: "",
     type: "credit" as "credit" | "debit",
-  });
+  };
+  const [form, setForm] = useState(emptyForm);
+  const [formError, setFormError] = useState("");
 
   const resetForm = () => {
-    setForm({ name: "", number: "", expiry: "", cvv: "", holderName: "", type: "credit" });
+    setForm(emptyForm);
+    setFormError("");
     setEditingCard(null);
     setShowForm(false);
   };
 
   const handleSaveCard = () => {
-    if (!form.name || !form.number || !form.expiry || !form.holderName) return;
+    if (!form.name.trim() || !form.holderName.trim()) {
+      setFormError(t("validation.nameRequired"));
+      return;
+    }
+    const digitsError = validateCardLastDigits(form.lastDigits);
+    const expiryError = validateCardExpiry(form.expiry);
+    if (digitsError || expiryError) {
+      setFormError(t((digitsError ?? expiryError)!));
+      return;
+    }
 
-    const brand = detectCardBrand(form.number) as PaymentCard["brand"];
     const cardData: PaymentCard = {
       id: editingCard?.id ?? generateId(),
-      name: form.name,
-      number: form.number.replace(/\D/g, ""),
-      expiry: form.expiry,
-      cvv: form.cvv,
-      brand,
-      holderName: form.holderName,
+      name: form.name.trim(),
+      lastDigits: form.lastDigits,
+      expiry: form.expiry.trim(),
+      brand: form.brand,
+      holderName: form.holderName.trim(),
       type: form.type,
       isPrimary: editingCard?.isPrimary ?? cards.length === 0,
       isHidden: editingCard?.isHidden ?? false,
@@ -392,7 +403,7 @@ function PaymentMethodsScreen({ onBack }: { onBack: () => void }) {
                   )}
                 </div>
                 <p className="ff-text-muted text-sm">
-                  {card.isHidden ? maskCardNumber(card.number) : card.number.replace(/(\d{4})/g, "$1 ").trim()}
+                  {maskCardNumber(card.lastDigits, card.isHidden)}
                 </p>
                 <p className="ff-text-muted text-xs mt-1">
                   {card.holderName} · {t(`profile.cardType.${card.type}`)} · {card.brand.toUpperCase()}
@@ -415,12 +426,13 @@ function PaymentMethodsScreen({ onBack }: { onBack: () => void }) {
                   setEditingCard(card);
                   setForm({
                     name: card.name,
-                    number: card.number,
+                    lastDigits: card.lastDigits,
                     expiry: card.expiry,
-                    cvv: card.cvv,
+                    brand: card.brand,
                     holderName: card.holderName,
                     type: card.type,
                   });
+                  setFormError("");
                   setShowForm(true);
                 }}
                 className="text-xs px-3 py-1 ff-card-interactive rounded-full"
@@ -451,17 +463,45 @@ function PaymentMethodsScreen({ onBack }: { onBack: () => void }) {
           <FormField label={t("profile.cardName")}>
             <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="ff-input px-4 py-3" />
           </FormField>
-          <FormField label={t("profile.cardNumber")}>
-            <input value={form.number} onChange={(e) => setForm({ ...form, number: e.target.value })} className="ff-input px-4 py-3" maxLength={19} />
-          </FormField>
+          <p className="ff-text-muted text-xs flex items-start gap-2">
+            <Shield className="w-4 h-4 shrink-0" style={{ color: "var(--ff-cyan)" }} />
+            {t("profile.cardSecurityNote")}
+          </p>
           <div className="grid grid-cols-2 gap-3">
-            <FormField label={t("profile.cardExpiry")}>
-              <input value={form.expiry} onChange={(e) => setForm({ ...form, expiry: e.target.value })} className="ff-input px-4 py-3" placeholder="MM/AA" />
+            <FormField label={t("profile.cardLastDigits")}>
+              <input
+                value={form.lastDigits}
+                onChange={(e) => setForm({ ...form, lastDigits: e.target.value.replace(/\D/g, "").slice(0, 4) })}
+                className="ff-input px-4 py-3"
+                inputMode="numeric"
+                maxLength={4}
+                placeholder="1234"
+                autoComplete="off"
+              />
             </FormField>
-            <FormField label="CVV">
-              <input value={form.cvv} onChange={(e) => setForm({ ...form, cvv: e.target.value })} className="ff-input px-4 py-3" maxLength={4} type="password" />
+            <FormField label={t("profile.cardBrand")}>
+              <select value={form.brand} onChange={(e) => setForm({ ...form, brand: e.target.value as PaymentCard["brand"] })} className="ff-input px-4 py-3">
+                <option value="visa">Visa</option>
+                <option value="mastercard">Mastercard</option>
+                <option value="elo">Elo</option>
+                <option value="amex">American Express</option>
+                <option value="other">{t("profile.cardBrandOther")}</option>
+              </select>
             </FormField>
           </div>
+          <FormField label={t("profile.cardExpiry")}>
+            <input
+              value={form.expiry}
+              onChange={(e) => {
+                const digits = e.target.value.replace(/\D/g, "").slice(0, 4);
+                setForm({ ...form, expiry: digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits });
+              }}
+              className="ff-input px-4 py-3"
+              inputMode="numeric"
+              placeholder="MM/AA"
+              autoComplete="off"
+            />
+          </FormField>
           <FormField label={t("profile.cardHolder")}>
             <input value={form.holderName} onChange={(e) => setForm({ ...form, holderName: e.target.value })} className="ff-input px-4 py-3" />
           </FormField>
@@ -471,6 +511,7 @@ function PaymentMethodsScreen({ onBack }: { onBack: () => void }) {
               <option value="debit">{t("profile.cardType.debit")}</option>
             </select>
           </FormField>
+          {formError && <p className="text-red-400 text-xs">{formError}</p>}
           <div className="grid grid-cols-2 gap-3">
             <button type="button" onClick={resetForm} className="py-3 ff-card-interactive rounded-xl">
               {t("common.cancel")}
