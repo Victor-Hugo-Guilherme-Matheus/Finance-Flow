@@ -42,36 +42,24 @@ Aplicativo web de finanças pessoais com interface *mobile-first*, desenvolvido 
 
 ## 📸 Telas
 
-<div align="center">
+<table align="center">
+  <tr>
+    <td align="center" width="260"><b>Login</b><br /><br /><img src="docs/screenshots/login.png" width="230" alt="Tela de login" /></td>
+    <td align="center" width="260"><b>Dashboard</b><br /><br /><img src="docs/screenshots/dashboard.png" width="230" alt="Dashboard com saldo, receitas e despesas" /></td>
+    <td align="center" width="260"><b>Gráficos</b><br /><br /><img src="docs/screenshots/graficos.png" width="230" alt="Gráficos de evolução e gastos por categoria" /></td>
+  </tr>
+  <tr>
+    <td align="center" width="260"><b>Transações</b><br /><br /><img src="docs/screenshots/transacoes.png" width="230" alt="Lista de transações" /></td>
+    <td align="center" width="260"><b>Metas</b><br /><br /><img src="docs/screenshots/metas.png" width="230" alt="Metas financeiras" /></td>
+    <td align="center" width="260"><b>Conversor de moedas</b><br /><br /><img src="docs/screenshots/conversor.png" width="230" alt="Conversor de moedas" /></td>
+  </tr>
+  <tr>
+    <td align="center" width="260"><b>Perfil</b><br /><br /><img src="docs/screenshots/perfil.png" width="230" alt="Perfil do usuário" /></td>
+    <td align="center" width="260"><b>Tema claro</b><br /><br /><img src="docs/screenshots/tema-claro.png" width="230" alt="Dashboard no tema claro" /></td>
+  </tr>
+</table>
 
-| Login | Dashboard | Gráficos |
-|:---:|:---:|:---:|
-| <img src="docs/screenshots/login.png" width="230" alt="Tela de login" /> | <img src="docs/screenshots/dashboard.png" width="230" alt="Dashboard com saldo, receitas e despesas" /> | <img src="docs/screenshots/graficos.png" width="230" alt="Gráficos de evolução e gastos por categoria" /> |
-
-| Transações | Metas | Conversor de moedas |
-|:---:|:---:|:---:|
-| <img src="docs/screenshots/transacoes.png" width="230" alt="Lista de transações" /> | <img src="docs/screenshots/metas.png" width="230" alt="Metas financeiras" /> | <img src="docs/screenshots/conversor.png" width="230" alt="Conversor de moedas" /> |
-
-| Perfil | Tema claro |
-|:---:|:---:|
-| <img src="docs/screenshots/perfil.png" width="230" alt="Perfil do usuário" /> | <img src="docs/screenshots/tema-claro.png" width="230" alt="Dashboard no tema claro" /> |
-
-<sub>Telas com dados de demonstração.</sub>
-
-</div>
-
----:|:---:|:---:|
-| <img src="docs/screenshots/login.png" width="230" alt="Tela de login" /> | <img src="docs/screenshots/dashboard.png" width="230" alt="Dashboard" /> | <img src="docs/screenshots/transacoes.png" width="230" alt="Lista de transações" /> |
-
-| Metas | Conversor de moedas | Perfil |
-|:---:|:---:|:---:|
-| <img src="docs/screenshots/metas.png" width="230" alt="Metas financeiras" /> | <img src="docs/screenshots/conversor.png" width="230" alt="Conversor de moedas" /> | <img src="docs/screenshots/perfil.png" width="230" alt="Perfil do usuário" /> |
-
-| Tema escuro | Tema claro |
-|:---:|:---:|
-| <img src="docs/screenshots/tema-escuro.png" width="230" alt="App no tema escuro" /> | <img src="docs/screenshots/tema-claro.png" width="230" alt="App no tema claro" /> |
-
-</div>
+<p align="center"><sub>Telas com dados de demonstração.</sub></p>
 
 ---
 
@@ -205,5 +193,23 @@ src/
 
 ## 👥 Equipe
 
-| [<img src="https://github.com/ViktorHSO.png" width="80" /><br /><b>Victor Hugo</b>](https://github.com/ViktorHSO) | [<img src="https://github.com/guilherme07O.png" width="80" /><br /><b>Guilherme</b>](https://github.com/guilherme07O) | **Matheus** |
-|:---:|:---:|:---:|
+<table>
+  <tr>
+    <td align="center" width="140">
+      <a href="https://github.com/ViktorHSO">
+        <img src="https://github.com/ViktorHSO.png" width="80" height="80" alt="Victor Hugo" /><br />
+        <b>Victor Hugo</b>
+      </a>
+    </td>
+    <td align="center" width="140">
+      <a href="https://github.com/guilherme07O">
+        <img src="https://github.com/guilherme07O.png" width="80" height="80" alt="Guilherme" /><br />
+        <b>Guilherme</b>
+      </a>
+    </td>
+    <td align="center" width="140">
+      <img src="docs/avatar-matheus.png" width="80" height="80" alt="Matheus" /><br />
+      <b>Matheus</b>
+    </td>
+  </tr>
+</table>
