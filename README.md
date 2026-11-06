@@ -195,21 +195,17 @@ src/
 
 <table>
   <tr>
-    <td align="center" width="140">
+    <td align="center" width="160">
       <a href="https://github.com/ViktorHSO">
         <img src="https://github.com/ViktorHSO.png" width="80" height="80" alt="Victor Hugo" /><br />
         <b>Victor Hugo</b>
       </a>
     </td>
-    <td align="center" width="140">
+    <td align="center" width="160">
       <a href="https://github.com/guilherme07O">
-        <img src="https://github.com/guilherme07O.png" width="80" height="80" alt="Guilherme" /><br />
-        <b>Guilherme</b>
+        <img src="https://github.com/guilherme07O.png" width="80" height="80" alt="Guilherme Matheus" /><br />
+        <b>Guilherme Matheus</b>
       </a>
-    </td>
-    <td align="center" width="140">
-      <img src="docs/avatar-matheus.png" width="80" height="80" alt="Matheus" /><br />
-      <b>Matheus</b>
     </td>
   </tr>
 </table>
