@@ -41,7 +41,7 @@ const pt = {
     sendResetLink: "Enviar link de recuperação",
     resetPassword: "Redefinir senha",
     hasAccount: "Já tem conta?",
-    resetEmailSent: "Link de recuperação enviado! Verifique seu e-mail (simulado).",
+    resetEmailSent: "Se o e-mail estiver cadastrado, você receberá um link para criar uma nova senha.",
     passwordResetSuccess: "Senha redefinida com sucesso!",
     invalidCredentials: "E-mail ou senha incorretos",
     emailExists: "Este e-mail já está cadastrado",
@@ -53,6 +53,8 @@ const pt = {
     userNotFound: "Usuário não encontrado",
     wrongPassword: "Senha atual incorreta",
     socialNotAvailable: "Login social disponível após integração com backend",
+    tooManyRequests: "Muitas tentativas. Aguarde alguns minutos e tente de novo.",
+    networkError: "Sem conexão com a internet. Verifique e tente de novo.",
     showPassword: "Mostrar senha",
     hidePassword: "Ocultar senha",
   },
@@ -243,6 +245,7 @@ const pt = {
     logOut: "Sair",
     rights: "© 2026 Todos os direitos reservados",
     saved: "Alterações salvas com sucesso",
+    photoError: "Não foi possível atualizar a foto. Tente outra imagem.",
     phone: "Telefone",
     avatarPrompt: "Iniciais do avatar (máx. 3 letras)",
     changePassword: "Alterar senha",
@@ -308,12 +311,15 @@ const pt = {
       security: "Altere sua senha, ative 2FA e biometria, e gerencie sessões ativas na seção Segurança.",
       goals: "Crie metas, acompanhe o progresso e marque como concluídas na aba Metas.",
       transactions: "Registre receitas, despesas e transferências. Use filtros e busca para encontrar movimentações.",
-      cards: "Cadastre cartões de crédito e débito para referência. Dados ficam apenas no dispositivo.",
+      cards: "Cadastre cartões de crédito e débito para referência. Guardamos apenas os 4 últimos dígitos, nunca o número completo nem o CVV.",
     },
   },
-} as const;
+};
 
-const en: typeof pt = {
+/** Mesmas chaves do português, com qualquer texto */
+type Widen<T> = { [K in keyof T]: T[K] extends string ? string : Widen<T[K]> };
+
+const en: Widen<typeof pt> = {
   splash: {
     tagline: "Smart financial management",
   },
@@ -354,7 +360,7 @@ const en: typeof pt = {
     sendResetLink: "Send recovery link",
     resetPassword: "Reset password",
     hasAccount: "Already have an account?",
-    resetEmailSent: "Recovery link sent! Check your email (simulated).",
+    resetEmailSent: "If this email is registered, you will receive a link to create a new password.",
     passwordResetSuccess: "Password reset successfully!",
     invalidCredentials: "Incorrect email or password",
     emailExists: "This email is already registered",
@@ -366,6 +372,8 @@ const en: typeof pt = {
     userNotFound: "User not found",
     wrongPassword: "Current password is incorrect",
     socialNotAvailable: "Social login available after backend integration",
+    tooManyRequests: "Too many attempts. Wait a few minutes and try again.",
+    networkError: "No internet connection. Check it and try again.",
     showPassword: "Show password",
     hidePassword: "Hide password",
   },
@@ -556,6 +564,7 @@ const en: typeof pt = {
     logOut: "Log Out",
     rights: "© 2026 All rights reserved",
     saved: "Changes saved successfully",
+    photoError: "Could not update the photo. Try another image.",
     phone: "Phone",
     avatarPrompt: "Avatar initials (max 3 letters)",
     changePassword: "Change password",
@@ -621,7 +630,7 @@ const en: typeof pt = {
       security: "Change password, enable 2FA and biometrics, and manage active sessions.",
       goals: "Create goals, track progress and mark as completed in the Goals tab.",
       transactions: "Record income, expenses and transfers. Use filters and search.",
-      cards: "Register credit and debit cards for reference. Data stays on device only.",
+      cards: "Register credit and debit cards for reference. Only the last 4 digits are stored, never the full number or CVV.",
     },
   },
 };

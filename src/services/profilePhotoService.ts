@@ -1,54 +1,55 @@
-import { doc, updateDoc } from "firebase/firestore";
-import { db } from "./firebase";
+import { deleteDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { profilePhotoDoc } from "./db";
 
-const MAX_SIZE_KB = 800;
+/**
+ * A foto fica em users/{uid}/settings/profilePhoto, separada do perfil,
+ * para o documento do usuário continuar legível no console do Firebase.
+ * Limite de ~500 KB no texto base64 (o Firestore aceita até 1 MiB por documento).
+ */
+const MAX_DATA_URL_CHARS = 500_000;
+const MAX_DIMENSION = 400;
 
-function compressImage(file: File, maxSizeKB: number): Promise<string> {
+function compressImage(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.readAsDataURL(file);
+    reader.onerror = reject;
     reader.onload = (e) => {
       const img = new Image();
-      img.src = e.target?.result as string;
+      img.onerror = reject;
       img.onload = () => {
-        const canvas = document.createElement("canvas");
         let { width, height } = img;
-
-        // Redimensiona se muito grande
-        const maxDim = 400;
-        if (width > maxDim || height > maxDim) {
-          if (width > height) {
-            height = (height / width) * maxDim;
-            width = maxDim;
-          } else {
-            width = (width / height) * maxDim;
-            height = maxDim;
-          }
+        if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
+          const ratio = Math.min(MAX_DIMENSION / width, MAX_DIMENSION / height);
+          width = Math.round(width * ratio);
+          height = Math.round(height * ratio);
         }
 
+        const canvas = document.createElement("canvas");
         canvas.width = width;
         canvas.height = height;
-        const ctx = canvas.getContext("2d")!;
-        ctx.drawImage(img, 0, 0, width, height);
+        canvas.getContext("2d")!.drawImage(img, 0, 0, width, height);
 
-        // Comprime até caber no limite
         let quality = 0.9;
         let result = canvas.toDataURL("image/jpeg", quality);
-        while (result.length > maxSizeKB * 1024 * 1.37 && quality > 0.1) {
+        while (result.length > MAX_DATA_URL_CHARS && quality > 0.2) {
           quality -= 0.1;
           result = canvas.toDataURL("image/jpeg", quality);
         }
-
-        resolve(result);
+        if (result.length > MAX_DATA_URL_CHARS) reject(new Error("Imagem muito grande"));
+        else resolve(result);
       };
-      img.onerror = reject;
+      img.src = e.target?.result as string;
     };
-    reader.onerror = reject;
+    reader.readAsDataURL(file);
   });
 }
 
 export async function uploadProfilePhoto(userId: string, file: File): Promise<string> {
-  const base64 = await compressImage(file, MAX_SIZE_KB);
-  await updateDoc(doc(db, "users", userId), { photoURL: base64 });
-  return base64;
+  const dataUrl = await compressImage(file);
+  await setDoc(profilePhotoDoc(userId), { dataUrl, updatedAt: serverTimestamp() });
+  return dataUrl;
+}
+
+export async function removeProfilePhoto(userId: string): Promise<void> {
+  await deleteDoc(profilePhotoDoc(userId));
 }

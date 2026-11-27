@@ -109,7 +109,7 @@ cp .env.example .env   # e preencha com os dados do seu Firebase
 npm run dev
 ```
 
-Para gerar a versão de produção: `npm run build`.
+Outros comandos: `npm run build` (produção), `npm run typecheck` (checagem de tipos) e `npm test` (testes).
 
 ---
 
@@ -143,18 +143,40 @@ VITE_FIREBASE_APP_ID=
 As regras em `firestore.rules` garantem que cada usuário só acesse os próprios dados:
 
 ```bash
-npm install -g firebase-tools
-firebase login
-firebase deploy --only firestore
+npx firebase-tools login
+npm run deploy:regras
+```
+
+### 5. Publique o app (opcional)
+```bash
+npm run build
+npx firebase-tools deploy --only hosting
 ```
 
 </details>
 
 ---
 
+## 🗄️ Banco de dados
+
+Tudo de um usuário fica dentro do documento dele, então é fácil saber quem fez o quê:
+
+```
+users/{uid}                        perfil
+users/{uid}/transactions/{id}      receitas, despesas e transferências
+users/{uid}/goals/{id}             metas
+users/{uid}/cards/{id}             cartões (só os 4 últimos dígitos)
+users/{uid}/settings/preferences   preferências
+users/{uid}/settings/profilePhoto  foto de perfil
+```
+
+Campos, regras e migração dos dados antigos: [docs/banco-de-dados.md](docs/banco-de-dados.md).
+
+---
+
 ## 🔒 Segurança
 
-- Cada usuário só lê e altera os próprios dados (regras em `firestore.rules`)
+- Cada usuário só lê e altera os próprios dados, e cada documento só aceita os campos esperados (regras em `firestore.rules`)
 - Chaves do Firebase ficam no `.env`, fora do repositório
 - Cartões guardam apenas os 4 últimos dígitos; número completo e CVV nunca são salvos
 
@@ -169,7 +191,7 @@ src/
 │   └── components/        # Telas, modais e componentes de interface
 ├── context/               # Estado global (autenticação e finanças)
 ├── i18n/                  # Traduções PT/EN
-├── services/              # Firebase, câmbio e upload de foto
+├── services/              # Firebase (db.ts = caminhos do banco), câmbio e foto
 ├── styles/                # Tema e estilos globais
 ├── theme/                 # Tema claro/escuro
 ├── types/                 # Tipos TypeScript
@@ -183,7 +205,8 @@ src/
 - [x] Regras de segurança do Firestore
 - [x] Configuração do Firebase via `.env`
 - [x] Cartões sem dados sensíveis
-- [ ] Recuperação de senha pelo Firebase
+- [x] Recuperação de senha pelo Firebase
+- [x] Banco organizado por usuário
 - [ ] App instalável (PWA) e modo offline
 - [ ] Orçamento por categoria com alertas
 - [ ] Fatura de cartão, parcelamento e contas recorrentes

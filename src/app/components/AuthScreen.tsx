@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from "motion/react";
 import { Mail, Lock, Eye, EyeOff, User, ArrowLeft } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageContext";
 import { useAuth } from "../../context/AuthContext";
-import { authService } from "../../services/dataService";
 import {
   validateConfirmPassword,
   validateEmail,
@@ -20,13 +19,12 @@ interface AuthScreenProps {
 
 export default function AuthScreen({ onAuthenticated }: AuthScreenProps) {
   const { t } = useLanguage();
-  const { login, register } = useAuth();
+  const { login, register, requestPasswordReset } = useAuth();
   const [view, setView] = useState<AuthView>("login");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [resetToken, setResetToken] = useState("");
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -90,40 +88,12 @@ export default function AuthScreen({ onAuthenticated }: AuthScreenProps) {
     }
 
     setLoading(true);
-    const result = authService.requestPasswordReset(email);
+    // O Firebase envia um e-mail com o link para criar a nova senha
+    const result = await requestPasswordReset(email);
     setLoading(false);
 
     if (result.success) {
-      setResetToken(result.token);
       setSuccess(t("auth.resetEmailSent"));
-      setView("reset");
-    } else {
-      setError(t(result.error ?? "auth.emailNotFound"));
-    }
-  };
-
-  const handleResetPassword = async () => {
-    clearMessages();
-    const passwordError = validatePassword(password);
-    const confirmError = validateConfirmPassword(password, confirmPassword);
-
-    if (passwordError || confirmError) {
-      setError(t(passwordError ?? confirmError!));
-      return;
-    }
-
-    setLoading(true);
-    const result = authService.resetPassword(resetToken, password);
-    setLoading(false);
-
-    if (result.success) {
-      setSuccess(t("auth.passwordResetSuccess"));
-      setTimeout(() => {
-        setView("login");
-        setPassword("");
-        setConfirmPassword("");
-        setSuccess("");
-      }, 2000);
     } else {
       setError(t(result.error ?? "auth.resetFailed"));
     }
@@ -292,8 +262,7 @@ export default function AuthScreen({ onAuthenticated }: AuthScreenProps) {
             onClick={() => {
               if (view === "login") handleLogin();
               else if (view === "signup") handleSignup();
-              else if (view === "forgot") handleForgotPassword();
-              else handleResetPassword();
+              else handleForgotPassword();
             }}
             disabled={loading}
             className="w-full ff-btn-primary px-6 py-4 disabled:opacity-60"
