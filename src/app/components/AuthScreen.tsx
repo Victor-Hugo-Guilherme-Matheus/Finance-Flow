@@ -2,7 +2,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Mail, Lock, Eye, EyeOff, User, ArrowLeft } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageContext";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth, type SocialProvider } from "../../context/AuthContext";
 import {
   validateConfirmPassword,
   validateEmail,
@@ -19,7 +19,8 @@ interface AuthScreenProps {
 
 export default function AuthScreen({ onAuthenticated }: AuthScreenProps) {
   const { t } = useLanguage();
-  const { login, register, requestPasswordReset } = useAuth();
+  const { login, register, requestPasswordReset, loginWithProvider } = useAuth();
+  const [socialLoading, setSocialLoading] = useState<SocialProvider | null>(null);
   const [view, setView] = useState<AuthView>("login");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -77,6 +78,15 @@ export default function AuthScreen({ onAuthenticated }: AuthScreenProps) {
     } else {
       setError(t(result.error ?? "auth.registerFailed"));
     }
+  };
+
+  const handleSocialLogin = async (provider: SocialProvider) => {
+    clearMessages();
+    setSocialLoading(provider);
+    const result = await loginWithProvider(provider);
+    setSocialLoading(null);
+    if (result.success) onAuthenticated();
+    else if (result.error !== "auth.socialCancelled") setError(t(result.error ?? "auth.socialFailed"));
   };
 
   const handleForgotPassword = async () => {
@@ -326,20 +336,25 @@ export default function AuthScreen({ onAuthenticated }: AuthScreenProps) {
               <div className="flex-1 h-px" style={{ backgroundColor: "var(--ff-border)" }} />
             </div>
             <div className="mt-6 grid grid-cols-2 gap-4">
-              <button
-                type="button"
-                className="ff-card-interactive py-3 ff-text"
-                onClick={() => setError(t("auth.socialNotAvailable"))}
-              >
-                Google
-              </button>
-              <button
-                type="button"
-                className="ff-card-interactive py-3 ff-text"
-                onClick={() => setError(t("auth.socialNotAvailable"))}
-              >
-                Apple
-              </button>
+              {(["google", "apple"] as SocialProvider[]).map((provider) => (
+                <button
+                  key={provider}
+                  type="button"
+                  className="ff-card-interactive py-3 ff-text flex items-center justify-center gap-2 disabled:opacity-60"
+                  disabled={socialLoading !== null}
+                  aria-busy={socialLoading === provider}
+                  onClick={() => handleSocialLogin(provider)}
+                >
+                  {socialLoading === provider && (
+                    <span
+                      className="w-4 h-4 rounded-full border-2 border-t-transparent animate-spin"
+                      style={{ borderColor: "var(--ff-cyan)", borderTopColor: "transparent" }}
+                      aria-hidden="true"
+                    />
+                  )}
+                  {provider === "google" ? "Google" : "Apple"}
+                </button>
+              ))}
             </div>
           </>
         )}
