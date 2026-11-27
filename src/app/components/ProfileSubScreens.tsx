@@ -11,7 +11,6 @@ import {
   maskCardNumber,
   validateCardExpiry,
   validateCardLastDigits,
-  validateEmail,
   validatePassword,
   validatePhone,
   validateRequired,
@@ -56,21 +55,20 @@ function PersonalInfoScreen({ onBack }: { onBack: () => void }) {
   const { t } = useLanguage();
   const { user, updateProfile } = useAuth();
   const [fullName, setFullName] = useState(user?.fullName ?? "");
-  const [email, setEmail] = useState(user?.email ?? "");
+  const email = user?.email ?? "";
   const [phone, setPhone] = useState(user?.phone ?? "");
   const [avatarInitials, setAvatarInitials] = useState(user?.avatarInitials ?? "");
   const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
 
   const handleSave = async () => {
     const nameError = validateRequired(fullName, "validation.nameRequired");
-    const emailError = validateEmail(email);
     const phoneError = validatePhone(phone);
-    if (nameError || emailError || phoneError) {
-      setMessage({ type: "error", text: t(nameError ?? emailError ?? phoneError!) });
+    if (nameError || phoneError) {
+      setMessage({ type: "error", text: t(nameError ?? phoneError!) });
       return;
     }
 
-    const result = await updateProfile({ fullName, email, phone, avatarInitials });
+    const result = await updateProfile({ fullName, phone, avatarInitials });
     if (result.success) {
       setMessage({ type: "success", text: t("profile.saved") });
     } else {
@@ -103,7 +101,8 @@ function PersonalInfoScreen({ onBack }: { onBack: () => void }) {
           <input value={fullName} onChange={(e) => setFullName(e.target.value)} className="ff-input px-4 py-3" />
         </FormField>
         <FormField label={t("login.email")}>
-          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="ff-input px-4 py-3" />
+          {/* O e-mail é o login da conta (Firebase Auth) e não é alterado por aqui */}
+          <input type="email" value={email} readOnly disabled className="ff-input px-4 py-3 opacity-60" />
         </FormField>
         <FormField label={t("profile.phone")}>
           <input value={phone} onChange={(e) => setPhone(e.target.value)} className="ff-input px-4 py-3" placeholder="(11) 99999-9999" />

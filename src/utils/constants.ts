@@ -1,15 +1,5 @@
 /** Constantes compartilhadas do app */
 
-export const STORAGE_KEYS = {
-  users: "financeflow-users",
-  session: "financeflow-session",
-  transactions: "financeflow-transactions",
-  goals: "financeflow-goals",
-  cards: "financeflow-cards",
-  preferences: "financeflow-preferences",
-  resetTokens: "financeflow-reset-tokens",
-} as const;
-
 export const CATEGORY_COLORS: Record<string, string> = {
   food: "#079697",
   transport: "#5b6bf5",

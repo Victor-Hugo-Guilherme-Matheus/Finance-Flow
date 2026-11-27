@@ -9,3 +9,10 @@ node_modules
 .firebase/
 firebase-debug.log
 firestore-debug.log
+
+# Build
+dist/
+
+# Chaves de conta de serviço (usadas só no script de migração)
+*serviceAccount*.json
+*-firebase-adminsdk-*.json

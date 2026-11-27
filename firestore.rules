@@ -1,61 +1,143 @@
 rules_version = '2';
 
-// Regras de segurança do FinanceFlow.
-// Cada usuário só pode ler e alterar os próprios dados.
-// Publicar com: firebase deploy --only firestore:rules
+// Regras de segurança do FinanceFlow
+//
+// Estrutura do banco (tudo de um usuário fica dentro do documento dele):
+//   users/{uid}                        perfil
+//   users/{uid}/transactions/{id}      receitas, despesas e transferências
+//   users/{uid}/goals/{id}             metas
+//   users/{uid}/cards/{id}             cartões (só os 4 últimos dígitos)
+//   users/{uid}/settings/preferences   preferências
+//   users/{uid}/settings/profilePhoto  foto de perfil
+//
+// Cada usuário só lê e altera o que está dentro de users/{seu uid}.
+// Publicar com: firebase deploy --only firestore
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function signedIn() {
-      return request.auth != null;
-    }
-
     function isOwner(uid) {
-      return signedIn() && request.auth.uid == uid;
+      return request.auth != null && request.auth.uid == uid;
     }
 
-    // O dono do documento não pode ser trocado numa atualização
-    function keepsOwner() {
-      return request.resource.data.userId == resource.data.userId;
+    function data() {
+      return request.resource.data;
     }
 
-    // Perfil do usuário: documento com o mesmo id do uid
+    function isText(value, min, max) {
+      return value is string && value.size() >= min && value.size() <= max;
+    }
+
+    function isIsoDate(value) {
+      return value is string && value.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+    }
+
+    // createdAt/updatedAt sempre com o horário do servidor (serverTimestamp)
+    function timestampsOnCreate() {
+      return data().createdAt == request.time && data().updatedAt == request.time;
+    }
+
+    function timestampsOnUpdate() {
+      return data().createdAt == resource.data.createdAt && data().updatedAt == request.time;
+    }
+
+    // ---------- Perfil ----------
+    function validProfile() {
+      return data().keys().hasAll(['fullName', 'email', 'createdAt', 'updatedAt'])
+        && data().keys().hasOnly(['fullName', 'email', 'phone', 'avatarInitials', 'createdAt', 'updatedAt'])
+        && isText(data().fullName, 1, 100)
+        && isText(data().email, 3, 200)
+        && (!('phone' in data()) || isText(data().phone, 0, 30))
+        && (!('avatarInitials' in data()) || isText(data().avatarInitials, 0, 3));
+    }
+
+    // ---------- Transações ----------
+    function validTransaction() {
+      return data().keys().hasAll(['name', 'amount', 'type', 'category', 'date', 'history', 'createdAt', 'updatedAt'])
+        && data().keys().hasOnly(['name', 'description', 'amount', 'type', 'category', 'date',
+                                  'paymentMethod', 'notes', 'history', 'createdAt', 'updatedAt'])
+        && isText(data().name, 1, 100)
+        && data().amount is number && data().amount > 0
+        && data().type in ['income', 'expense', 'transfer']
+        && isText(data().category, 1, 40)
+        && isIsoDate(data().date)
+        && data().history is list
+        && (!('description' in data()) || isText(data().description, 0, 300))
+        && (!('paymentMethod' in data()) || isText(data().paymentMethod, 0, 40))
+        && (!('notes' in data()) || isText(data().notes, 0, 1000));
+    }
+
+    // ---------- Metas ----------
+    function validGoal() {
+      return data().keys().hasAll(['name', 'targetAmount', 'currentAmount', 'deadline', 'category',
+                                   'status', 'history', 'createdAt', 'updatedAt'])
+        && data().keys().hasOnly(['name', 'targetAmount', 'currentAmount', 'deadline', 'category',
+                                  'icon', 'color', 'status', 'history', 'createdAt', 'updatedAt'])
+        && isText(data().name, 1, 100)
+        && data().targetAmount is number && data().targetAmount > 0
+        && data().currentAmount is number && data().currentAmount >= 0
+        && isIsoDate(data().deadline)
+        && isText(data().category, 1, 40)
+        && data().status in ['active', 'completed', 'closed']
+        && data().history is list;
+    }
+
+    // ---------- Cartões (nunca o número completo nem o CVV) ----------
+    function validCard() {
+      return data().keys().hasOnly(['name', 'lastDigits', 'expiry', 'brand', 'holderName',
+                                    'type', 'isPrimary', 'isHidden', 'updatedAt'])
+        && data().lastDigits is string && data().lastDigits.matches('^[0-9]{4}$')
+        && data().expiry is string && data().expiry.matches('^[0-9]{2}/[0-9]{2}$')
+        && data().brand in ['visa', 'mastercard', 'elo', 'amex', 'other']
+        && data().type in ['credit', 'debit']
+        && isText(data().name, 1, 60)
+        && isText(data().holderName, 1, 100)
+        && data().isPrimary is bool
+        && data().isHidden is bool
+        && data().updatedAt == request.time;
+    }
+
     match /users/{uid} {
-      allow read, create, update, delete: if isOwner(uid);
+      allow read, delete: if isOwner(uid);
+      allow create: if isOwner(uid) && validProfile() && timestampsOnCreate();
+      allow update: if isOwner(uid) && validProfile() && timestampsOnUpdate()
+        && data().email == resource.data.email;
+
+      match /transactions/{transactionId} {
+        allow read, delete: if isOwner(uid);
+        allow create: if isOwner(uid) && validTransaction() && timestampsOnCreate();
+        allow update: if isOwner(uid) && validTransaction() && timestampsOnUpdate();
+      }
+
+      match /goals/{goalId} {
+        allow read, delete: if isOwner(uid);
+        allow create: if isOwner(uid) && validGoal() && timestampsOnCreate();
+        allow update: if isOwner(uid) && validGoal() && timestampsOnUpdate();
+      }
+
+      match /cards/{cardId} {
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid) && validCard();
+      }
+
+      match /settings/preferences {
+        allow read, delete: if isOwner(uid);
+        allow write: if isOwner(uid)
+          && data().keys().hasOnly(['notifications', 'security', 'updatedAt'])
+          && data().notifications is map
+          && data().security is map;
+      }
+
+      match /settings/profilePhoto {
+        allow read, delete: if isOwner(uid);
+        allow write: if isOwner(uid)
+          && data().keys().hasOnly(['dataUrl', 'updatedAt'])
+          && data().dataUrl is string
+          && data().dataUrl.matches('^data:image/(jpeg|png|webp);base64,.*')
+          && data().dataUrl.size() <= 500000;
+      }
     }
 
-    // Preferências e cartões: um documento por usuário (id = uid)
-    match /preferences/{uid} {
-      allow read, write: if isOwner(uid);
-    }
-
-    match /cards/{uid} {
-      allow read, write: if isOwner(uid);
-    }
-
-    // Transações: cada documento guarda o uid do dono no campo userId
-    match /transactions/{transactionId} {
-      allow read, delete: if isOwner(resource.data.userId);
-      allow create: if isOwner(request.resource.data.userId)
-        && request.resource.data.amount is number;
-      allow update: if isOwner(resource.data.userId)
-        && keepsOwner()
-        && request.resource.data.amount is number;
-    }
-
-    // Metas: mesma lógica das transações
-    match /goals/{goalId} {
-      allow read, delete: if isOwner(resource.data.userId);
-      allow create: if isOwner(request.resource.data.userId)
-        && request.resource.data.targetAmount is number
-        && request.resource.data.currentAmount is number;
-      allow update: if isOwner(resource.data.userId)
-        && keepsOwner()
-        && request.resource.data.targetAmount is number
-        && request.resource.data.currentAmount is number;
-    }
-
-    // Qualquer outra coleção fica bloqueada
+    // Qualquer outro caminho (inclusive as coleções antigas da raiz) fica bloqueado
     match /{document=**} {
       allow read, write: if false;
     }

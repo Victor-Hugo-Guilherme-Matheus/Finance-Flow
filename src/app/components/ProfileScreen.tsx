@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { removeProfilePhoto, uploadProfilePhoto } from "../../services/profilePhotoService";
 import { motion, AnimatePresence } from "motion/react";
 import {
   User,
@@ -131,11 +132,10 @@ export default function ProfileScreen({ onLogout }: ProfileScreenProps) {
     if (!file || !user) return;
     setUploadingPhoto(true);
     try {
-      const { uploadProfilePhoto } = await import("../../services/profilePhotoService");
       await uploadProfilePhoto(user.id, file);
       await refreshUser();
     } catch {
-      alert("Erro ao atualizar foto.");
+      alert(t("profile.photoError"));
     } finally {
       setUploadingPhoto(false);
     }
@@ -144,13 +144,11 @@ export default function ProfileScreen({ onLogout }: ProfileScreenProps) {
   const handleRemovePhoto = async () => {
     if (!user) return;
     try {
-      const { doc, updateDoc } = await import("firebase/firestore");
-      const { db } = await import("../../services/firebase");
-      await updateDoc(doc(db, "users", user.id), { photoURL: "" });
+      await removeProfilePhoto(user.id);
       await refreshUser();
       setShowRemoveModal(false);
     } catch {
-      alert("Erro ao remover foto.");
+      alert(t("profile.photoError"));
     }
   };
 
@@ -385,4 +383,4 @@ export default function ProfileScreen({ onLogout }: ProfileScreenProps) {
       </AnimatePresence>
     </div>
   );
-}
+}

@@ -1,5 +1,21 @@
 /** Utilitários de formatação */
 
+/**
+ * Datas "AAAA-MM-DD" são lidas no fuso local. `new Date("2026-12-01")` seria
+ * meia-noite em UTC, ou seja, 30/11 às 21h no horário de Brasília.
+ */
+export function parseLocalDate(dateStr: string): Date {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr);
+  if (match) return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  return new Date(dateStr);
+}
+
+/** Data de hoje no fuso local, no formato "AAAA-MM-DD" */
+export function todayLocalISO(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 export function formatCurrency(value: number, locale = "pt-BR"): string {
   return new Intl.NumberFormat(locale, {
     style: "currency",
@@ -12,11 +28,11 @@ export function formatDate(dateStr: string, locale = "pt-BR"): string {
     day: "2-digit",
     month: "short",
     year: "numeric",
-  }).format(new Date(dateStr));
+  }).format(parseLocalDate(dateStr));
 }
 
 export function formatRelativeDate(dateStr: string, t: (key: string, params?: Record<string, string | number>) => string): string {
-  const date = new Date(dateStr);
+  const date = parseLocalDate(dateStr);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const target = new Date(date);
@@ -47,7 +63,7 @@ export function getMonthKey(date: Date): string {
 }
 
 export function isSameMonth(dateStr: string, reference = new Date()): boolean {
-  const date = new Date(dateStr);
+  const date = parseLocalDate(dateStr);
   return (
     date.getFullYear() === reference.getFullYear() &&
     date.getMonth() === reference.getMonth()
@@ -55,7 +71,7 @@ export function isSameMonth(dateStr: string, reference = new Date()): boolean {
 }
 
 export function daysUntil(dateStr: string): number {
-  const target = new Date(dateStr);
+  const target = parseLocalDate(dateStr);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   target.setHours(0, 0, 0, 0);

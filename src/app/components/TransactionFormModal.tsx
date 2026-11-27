@@ -5,6 +5,7 @@ import { useLanguage } from "../../i18n/LanguageContext";
 import { useFinance } from "../../context/FinanceContext";
 import type { Transaction, TransactionType } from "../../types";
 import { AlertMessage, FormField, CustomSelect } from "./shared/UiHelpers";
+import { todayLocalISO } from "../../utils/format";
 
 const CATEGORIES = ["food", "transport", "shopping", "bills", "entertainment", "health", "income", "savings", "other"];
 const PAYMENT_METHODS = ["creditCard", "debitCard", "cash", "digitalWallet"];
@@ -30,7 +31,7 @@ export default function TransactionFormModal({
   const [type, setType] = useState<TransactionType>(transaction?.type ?? defaultType);
   const [category, setCategory] = useState(transaction?.category ?? "");
   const [date, setDate] = useState(
-    transaction?.date ?? new Date().toISOString().split("T")[0]
+    transaction?.date ?? todayLocalISO()
   );
   const [paymentMethod, setPaymentMethod] = useState(transaction?.paymentMethod ?? "");
   const [notes, setNotes] = useState(transaction?.notes ?? "");
@@ -214,4 +215,4 @@ export default function TransactionFormModal({
       </motion.div>
     </div>
   );
-}
+}

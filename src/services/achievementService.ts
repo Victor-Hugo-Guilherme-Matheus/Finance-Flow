@@ -1,4 +1,5 @@
 import type { Goal } from "../types";
+import { parseLocalDate } from "../utils/format";
 
 export interface Achievement {
   id: string;
@@ -67,7 +68,7 @@ export function checkAchievements(
   // 🔥 Antecipado — concluiu antes do prazo
   if (justUpdatedGoal?.status === "completed") {
     const days = Math.ceil(
-      (new Date(justUpdatedGoal.deadline).getTime() - Date.now()) / 86400000
+      (parseLocalDate(justUpdatedGoal.deadline).getTime() - Date.now()) / 86400000
     );
     if (days > 0) {
       unlocked.push({
@@ -100,4 +101,4 @@ export function checkAchievements(
   }
 
   return unlocked;
-}
+}

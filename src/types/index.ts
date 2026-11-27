@@ -1,4 +1,4 @@
-/** Tipos de domínio — preparados para futura integração com API/banco de dados */
+/** Tipos de domínio. Onde cada um fica no Firestore: veja src/services/db.ts */
 
 export type TransactionType = "income" | "expense" | "transfer";
 
@@ -49,18 +49,6 @@ export interface Goal {
   updatedAt: string;
 }
 
-export interface User {
-  id: string;
-  fullName: string;
-  email: string;
-  /** Senha simulada — em produção seria hash no backend */
-  password: string;
-  phone?: string;
-  avatarInitials?: string;
-  avatarColor?: string;
-  createdAt: string;
-}
-
 export interface PaymentCard {
   id: string;
   name: string;
@@ -99,12 +87,6 @@ export interface SecuritySettings {
 export interface UserPreferences {
   notifications: NotificationPreferences;
   security: SecuritySettings;
-}
-
-export interface ResetToken {
-  email: string;
-  token: string;
-  expiresAt: string;
 }
 
 export interface DashboardStats {
