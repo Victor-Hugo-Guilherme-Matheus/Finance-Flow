@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion, AnimatePresence, MotionConfig } from "motion/react";
 import SplashScreen from "./components/SplashScreen";
 import AuthScreen from "./components/AuthScreen";
 import HomeDashboard from "./components/HomeDashboard";
@@ -65,30 +65,38 @@ function AppContent() {
   }
 
   return (
+    <MotionConfig reducedMotion="user">
     <div className="ff-app-shell">
-      <AnimatePresence mode="wait">
+      <AnimatePresence mode="wait" initial={false}>
         <motion.div
           key={activeScreen}
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -20 }}
-          transition={{ duration: 0.3 }}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
         >
           {renderScreen()}
         </motion.div>
       </AnimatePresence>
 
-      {/* FAB global para adicionar transação rápida */}
-      <motion.button
-        onClick={() => setShowAddTransaction(true)}
-        className="ff-fab fixed bottom-24 right-6 w-16 h-16 rounded-full flex items-center justify-center z-50"
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.9 }}
-        style={{ maxWidth: "calc(448px - 3rem)", marginLeft: "auto", marginRight: "1.5rem" }}
-        aria-label="Adicionar transação"
-      >
-        <Plus className="w-8 h-8" />
-      </motion.button>
+      {/* Atalho para nova transação só na tela inicial: Transações e Metas já têm o "+" no cabeçalho */}
+      <AnimatePresence>
+        {activeScreen === "home" && (
+          <div className="fixed bottom-24 left-1/2 -translate-x-1/2 w-full max-w-md pointer-events-none z-50">
+            <motion.button
+              onClick={() => setShowAddTransaction(true)}
+              className="ff-fab pointer-events-auto ml-auto mr-5 w-14 h-14 rounded-full flex items-center justify-center"
+              initial={{ scale: 0.6, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.6, opacity: 0 }}
+              whileTap={{ scale: 0.9 }}
+              aria-label="Adicionar transação"
+            >
+              <Plus className="w-7 h-7" />
+            </motion.button>
+          </div>
+        )}
+      </AnimatePresence>
 
       <BottomNavigation activeScreen={activeScreen} onNavigate={setActiveScreen} />
 
@@ -98,6 +106,7 @@ function AppContent() {
         )}
       </AnimatePresence>
     </div>
+    </MotionConfig>
   );
 }
 

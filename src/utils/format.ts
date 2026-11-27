@@ -45,6 +45,28 @@ export function formatRelativeDate(dateStr: string, t: (key: string, params?: Re
   return formatDate(dateStr);
 }
 
+/** Rótulo do dia para cabeçalhos de lista: "Hoje", "Ontem", "segunda, 24 de nov." */
+export function formatDayLabel(
+  dateStr: string,
+  t: (key: string, params?: Record<string, string | number>) => string,
+  locale = "pt-BR"
+): string {
+  const date = parseLocalDate(dateStr);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const diffDays = Math.round((today.getTime() - date.getTime()) / 86_400_000);
+  if (diffDays === 0) return t("dates.today");
+  if (diffDays === 1) return t("dates.yesterday");
+  const sameYear = date.getFullYear() === today.getFullYear();
+  const label = new Intl.DateTimeFormat(locale, {
+    weekday: diffDays < 7 && diffDays > 0 ? "long" : undefined,
+    day: "numeric",
+    month: "short",
+    year: sameYear ? undefined : "numeric",
+  }).format(date);
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
 export function getInitials(name: string): string {
   return name
     .split(" ")

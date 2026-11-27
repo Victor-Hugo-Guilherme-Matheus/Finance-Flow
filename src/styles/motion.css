@@ -1,0 +1,314 @@
+/*
+ * Movimento e utilitários visuais do FinanceFlow
+ *
+ * Regras de desempenho:
+ * - só animamos transform e opacity (rodam na GPU, sem recalcular layout);
+ * - os efeitos ligados à rolagem usam CSS scroll-driven animations, que rodam
+ *   fora da thread principal. Navegadores sem suporte (ex.: Firefox) apenas
+ *   ficam com a versão estática, sem JavaScript extra a cada scroll;
+ * - nada se move quando o sistema pede "reduzir movimento".
+ */
+
+@property --ff-fade-start {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+@property --ff-fade-end {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+@layer components {
+  /* Números alinhados em coluna (valores não "dançam" ao mudar) */
+  .ff-num {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+  }
+
+  /* ---------- Rolagem horizontal (chips, filtros) ---------- */
+  .ff-scroll-x {
+    --ff-fade-size: 2rem;
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x proximity;
+    scroll-padding-inline: 1.5rem;
+    scrollbar-width: none;
+    /* encosta nas bordas da tela para a rolagem não parecer cortada */
+    margin-inline: -1.5rem;
+    padding-inline: 1.5rem;
+    /* sem suporte a scroll-driven: um esmaecimento fixo no fim indica "tem mais" */
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - var(--ff-fade-size)), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - var(--ff-fade-size)), transparent);
+  }
+
+  .ff-scroll-x::-webkit-scrollbar {
+    display: none;
+  }
+
+  .ff-scroll-x > * {
+    flex-shrink: 0;
+    scroll-snap-align: start;
+  }
+
+  @supports (animation-timeline: scroll()) {
+    .ff-scroll-x {
+      /* o esmaecimento só aparece do lado em que ainda há conteúdo */
+      -webkit-mask-image: linear-gradient(
+        to right,
+        transparent,
+        #000 var(--ff-fade-start),
+        #000 calc(100% - var(--ff-fade-end)),
+        transparent
+      );
+      mask-image: linear-gradient(
+        to right,
+        transparent,
+        #000 var(--ff-fade-start),
+        #000 calc(100% - var(--ff-fade-end)),
+        transparent
+      );
+      animation: ff-fade-start linear both, ff-fade-end linear both;
+      animation-timeline: scroll(self inline);
+      animation-range: 0 var(--ff-fade-size), calc(100% - var(--ff-fade-size)) 100%;
+    }
+  }
+
+  /* ---------- Título grande que vira barra compacta ---------- */
+  .ff-compact-bar {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    height: 3.25rem;
+    margin-bottom: -3.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    opacity: 0;
+    background: color-mix(in srgb, var(--ff-bg) 82%, transparent);
+    border-bottom: 1px solid var(--ff-border);
+    -webkit-backdrop-filter: blur(16px) saturate(140%);
+    backdrop-filter: blur(16px) saturate(140%);
+    transition: opacity 0.2s var(--ff-ease-out);
+  }
+
+  .ff-compact-bar[data-visible="true"] {
+    opacity: 1;
+  }
+
+  .ff-large-title {
+    transform-origin: left bottom;
+  }
+
+  @supports (animation-timeline: scroll()) {
+    .ff-compact-bar {
+      transition: none;
+      animation: ff-appear linear both;
+      animation-timeline: --ff-page;
+      animation-range: 48px 88px;
+    }
+
+    .ff-large-title {
+      animation: ff-title-recede linear both;
+      animation-timeline: --ff-page;
+      animation-range: 0 88px;
+    }
+  }
+
+  /* ---------- Cartão de saldo com paralaxe ---------- */
+  .ff-hero {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    background: var(--ff-gradient-card);
+    color: var(--ff-on-accent);
+    border-radius: 1.75rem;
+    box-shadow:
+      0 1px 0 0 rgba(255, 255, 255, 0.22) inset,
+      0 30px 60px -24px var(--ff-glow-cyan);
+  }
+
+  .ff-hero-art {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+  }
+
+  .ff-hero-line {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 0;
+    animation: ff-draw 1.2s var(--ff-ease-emphasized) 0.15s both;
+  }
+
+  @supports (animation-timeline: scroll()) {
+    .ff-hero-layer,
+    .ff-hero-content {
+      animation: ff-parallax linear both;
+      animation-timeline: --ff-page;
+      animation-range: 0 260px;
+    }
+
+    .ff-hero-layer[data-depth="1"] {
+      --ff-depth: 10px;
+    }
+
+    .ff-hero-layer[data-depth="2"] {
+      --ff-depth: 22px;
+    }
+
+    .ff-hero-layer[data-depth="3"] {
+      --ff-depth: 36px;
+    }
+
+    .ff-hero-content {
+      --ff-depth: 18px;
+      animation-name: ff-parallax-content;
+    }
+  }
+
+  /* ---------- Lista agrupada (transações) ---------- */
+  .ff-group {
+    background: var(--ff-surface);
+    border: 1px solid var(--ff-border);
+    border-radius: 1.25rem;
+    overflow: hidden;
+  }
+
+  .ff-row {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    width: 100%;
+    padding: 0.875rem 1rem;
+    text-align: left;
+    transition: background-color 0.15s;
+  }
+
+  .ff-row + .ff-row::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 4.25rem;
+    right: 0;
+    height: 1px;
+    background: var(--ff-border);
+  }
+
+  .ff-row:hover {
+    background: var(--ff-surface-hover);
+  }
+
+  .ff-row:active {
+    background: var(--ff-surface-hover);
+    transition-duration: 0s;
+  }
+
+  .ff-cat-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 0.875rem;
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    color: var(--ff-cat, var(--ff-cyan));
+    background: color-mix(in srgb, var(--ff-cat, var(--ff-cyan)) 16%, transparent);
+  }
+
+  .ff-day-header {
+    position: sticky;
+    top: 3.25rem;
+    z-index: 10;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 0.625rem 0.25rem 0.5rem;
+    margin-inline: -0.25rem;
+    padding-inline: 0.5rem;
+    background: var(--ff-bg);
+  }
+
+  /* pequena sombra suave sob o cabeçalho fixo do dia */
+  .ff-day-header::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    height: 0.5rem;
+    background: linear-gradient(var(--ff-bg), transparent);
+    pointer-events: none;
+  }
+}
+
+@keyframes ff-fade-start {
+  to {
+    --ff-fade-start: var(--ff-fade-size);
+  }
+}
+
+@keyframes ff-fade-end {
+  from {
+    --ff-fade-end: var(--ff-fade-size);
+  }
+}
+
+@keyframes ff-appear {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes ff-title-recede {
+  to {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.94);
+  }
+}
+
+@keyframes ff-parallax {
+  to {
+    transform: translateY(var(--ff-depth, 0px));
+  }
+}
+
+@keyframes ff-parallax-content {
+  to {
+    transform: translateY(var(--ff-depth, 0px));
+    opacity: 0.35;
+  }
+}
+
+@keyframes ff-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .ff-compact-bar,
+  .ff-large-title,
+  .ff-hero-layer,
+  .ff-hero-content {
+    animation: none !important;
+  }
+}

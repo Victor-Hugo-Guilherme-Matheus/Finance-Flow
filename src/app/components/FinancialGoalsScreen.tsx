@@ -4,8 +4,9 @@ import { Target, TrendingUp, Calendar, Plus, Check, XCircle, Edit, Trash2, X } f
 import { useLanguage } from "../../i18n/LanguageContext";
 import { useFinance } from "../../context/FinanceContext";
 import type { Goal } from "../../types";
-import { formatCurrency, daysUntil } from "../../utils/format";
+import { formatCurrency, formatDate, daysUntil } from "../../utils/format";
 import { EmptyState, LoadingSpinner } from "./shared/UiHelpers";
+import { ScreenHeader } from "./shared/ScreenHeader";
 import GoalFormModal from "./GoalFormModal";
 import AchievementToast from "./AchievementToast";
 import { checkAchievements, type Achievement } from "../../services/achievementService";
@@ -197,25 +198,25 @@ export default function FinancialGoalsScreen() {
       />
 
       <div className="p-6">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h2 className="ff-heading text-2xl">{t("goals.title")}</h2>
-            <p className="ff-text-muted text-sm">{t("goals.subtitle")}</p>
-          </div>
-          <motion.button
-            type="button"
-            onClick={() => {
-              prevGoalsRef.current = goals;
-              setEditingGoal(null);
-              setShowForm(true);
-            }}
-            className="w-12 h-12 rounded-full ff-fab flex items-center justify-center"
-            whileTap={{ scale: 0.9 }}
-            aria-label={t("goals.create")}
-          >
-            <Plus className="w-6 h-6" />
-          </motion.button>
-        </div>
+        <ScreenHeader
+          title={t("goals.title")}
+          subtitle={t("goals.subtitle")}
+          action={
+            <motion.button
+              type="button"
+              onClick={() => {
+                prevGoalsRef.current = goals;
+                setEditingGoal(null);
+                setShowForm(true);
+              }}
+              className="w-11 h-11 rounded-full ff-fab flex items-center justify-center"
+              whileTap={{ scale: 0.9 }}
+              aria-label={t("goals.create")}
+            >
+              <Plus className="w-5 h-5" />
+            </motion.button>
+          }
+        />
 
         <div className="ff-card-lg p-6 mb-6">
           <div className="flex items-center gap-3 mb-4">
@@ -224,8 +225,9 @@ export default function FinancialGoalsScreen() {
             </div>
             <div>
               <p className="ff-text-muted text-sm">{t("goals.totalProgress")}</p>
-              <p className="ff-heading text-xl font-bold">
-                {formatCurrency(totalCurrent)} / {formatCurrency(totalTarget)}
+              <p className="ff-heading ff-num text-xl font-bold tracking-[-0.01em]">
+                {formatCurrency(totalCurrent)}
+                <span className="ff-text-muted text-sm font-normal"> {t("goals.of")} {formatCurrency(totalTarget)}</span>
               </p>
             </div>
           </div>
@@ -245,7 +247,7 @@ export default function FinancialGoalsScreen() {
           </p>
         </div>
 
-        <div className="flex gap-2 mb-6 overflow-x-auto pb-1">
+        <div className="ff-scroll-x mb-6 py-0.5">
           {(["active", "completed", "closed"] as const).map((tab) => (
             <button
               key={tab}
@@ -322,11 +324,19 @@ export default function FinancialGoalsScreen() {
                   {goal.history.length > 0 && (
                     <div className="mb-4 p-3 rounded-xl" style={{ backgroundColor: "var(--ff-accent-highlight)" }}>
                       <p className="ff-text-muted text-xs mb-2">{t("goals.history")}</p>
-                      {goal.history.slice(-3).map((h, i) => (
-                        <p key={i} className="ff-text text-xs">
-                          {formatCurrency(h.amount ?? 0)} — {h.action} — {h.date.split("T")[0]}
-                        </p>
-                      ))}
+                      <ul className="space-y-1">
+                        {goal.history.slice(-3).reverse().map((h, i) => (
+                          <li key={i} className="flex items-center justify-between gap-2 text-xs">
+                            <span className="ff-text">
+                              {t(`goals.historyActions.${h.action}`)}
+                              {h.amount !== undefined && (
+                                <span className="ff-num ff-text-muted"> · {formatCurrency(h.amount)}</span>
+                              )}
+                            </span>
+                            <span className="ff-text-faint">{formatDate(h.date.slice(0, 10))}</span>
+                          </li>
+                        ))}
+                      </ul>
                     </div>
                   )}
 
@@ -461,4 +471,4 @@ export default function FinancialGoalsScreen() {
       </AnimatePresence>
     </div>
   );
-}
+}

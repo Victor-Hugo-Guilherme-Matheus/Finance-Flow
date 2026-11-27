@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ScreenHeader } from "./shared/ScreenHeader";
 import { removeProfilePhoto, uploadProfilePhoto } from "../../services/profilePhotoService";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -176,9 +177,9 @@ export default function ProfileScreen({ onLogout }: ProfileScreenProps) {
   return (
     <div className="ff-page">
       <div className="p-6">
-        <h2 className="ff-heading text-2xl mb-8">{t("profile.title")}</h2>
+        <ScreenHeader title={t("profile.title")} />
 
-        <motion.div className="ff-card-lg p-6 mb-6" whileHover={{ scale: 1.01 }}>
+        <div className="ff-card-lg p-6 mb-6">
           <div className="flex items-center gap-4">
             <div className="flex flex-col items-center gap-1">
               <label className="relative cursor-pointer flex-shrink-0">
@@ -239,7 +240,7 @@ export default function ProfileScreen({ onLogout }: ProfileScreenProps) {
               </div>
             </div>
           </div>
-        </motion.div>
+        </div>
 
         <div className="grid grid-cols-3 gap-3 mb-6">
           <div className="ff-card-lg p-4 text-center">
@@ -383,4 +384,4 @@ export default function ProfileScreen({ onLogout }: ProfileScreenProps) {
       </AnimatePresence>
     </div>
   );
-}
+}
