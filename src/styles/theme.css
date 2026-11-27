@@ -3,6 +3,9 @@
 :root,
 .light {
   --font-size: 16px;
+  --ff-font: "Onest Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --ff-ease-out: cubic-bezier(0.2, 0, 0, 1);
+  --ff-ease-emphasized: cubic-bezier(0.05, 0.7, 0.1, 1);
 
   /* Light palette (proportions: 45% / 30% / 15% / 10%) */
   --ff-soft-cyan: #e6f7fa;
@@ -104,7 +107,7 @@
   --ff-surface-hover: rgba(255, 255, 255, 0.1);
   --ff-border: rgba(7, 150, 151, 0.2);
   --ff-border-strong: rgba(7, 150, 151, 0.35);
-  --ff-text: #ffffff;
+  --ff-text: rgba(255, 255, 255, 0.94);
   --ff-text-muted: rgba(255, 255, 255, 0.6);
   --ff-text-faint: rgba(255, 255, 255, 0.4);
   --ff-on-accent: #ffffff;
@@ -213,6 +216,28 @@
 
   html {
     font-size: var(--font-size);
+    font-family: var(--ff-font);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Barras de rolagem finas, na cor do tema (sem as setas do Windows) */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--ff-cyan) 40%, transparent) transparent;
+  }
+
+  /* No celular a rolagem já tem indicador nativo */
+  @media (hover: none) and (pointer: coarse) {
+    .ff-page {
+      scrollbar-width: none;
+    }
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--ff-cyan);
+    outline-offset: 2px;
   }
 
   h1 {
@@ -261,14 +286,19 @@
 @layer components {
   .ff-page {
     height: 100vh;
+    height: 100dvh;
     width: 100%;
     max-width: 28rem;
     margin-left: auto;
     margin-right: auto;
     overflow-y: auto;
-    padding-bottom: 6rem;
+    overscroll-behavior-y: contain;
+    /* espaço para a navegação inferior + botão flutuante */
+    padding-bottom: 9rem;
     background: var(--ff-gradient-page);
     color: var(--ff-text);
+    /* nomeia a rolagem da página para as animações ligadas ao scroll */
+    scroll-timeline: --ff-page block;
   }
 
   .ff-app-shell {
@@ -282,23 +312,24 @@
   .ff-card {
     background: var(--ff-surface);
     border: 1px solid var(--ff-border);
-    backdrop-filter: blur(24px);
     border-radius: 1rem;
   }
 
   .ff-card-lg {
     background: var(--ff-surface);
     border: 1px solid var(--ff-border);
-    backdrop-filter: blur(24px);
     border-radius: 1.5rem;
   }
 
   .ff-card-interactive {
     background: var(--ff-surface);
     border: 1px solid var(--ff-border);
-    backdrop-filter: blur(24px);
     border-radius: 1rem;
-    transition: background-color 0.2s;
+    transition: background-color 0.2s, transform 0.15s var(--ff-ease-out);
+  }
+
+  .ff-card-interactive:active {
+    transform: scale(0.97);
   }
 
   .ff-card-interactive:hover {

@@ -1,19 +1,13 @@
 import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import {
-  Search,
-  Filter,
-  ArrowUpRight,
-  ArrowDownRight,
-  ArrowLeftRight,
-  Plus,
-  X,
-} from "lucide-react";
+import { Search, SlidersHorizontal, Plus } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageContext";
 import { useFinance } from "../../context/FinanceContext";
 import type { Transaction, TransactionType } from "../../types";
-import { formatCurrency, formatRelativeDate, formatDate } from "../../utils/format";
+import { formatCurrency, formatDayLabel } from "../../utils/format";
 import { EmptyState, LoadingSpinner } from "./shared/UiHelpers";
+import { ScreenHeader } from "./shared/ScreenHeader";
+import { TransactionRow } from "./shared/TransactionRow";
 import TransactionFormModal from "./TransactionFormModal";
 import TransactionDetailModal from "./TransactionDetailModal";
 
@@ -86,14 +80,27 @@ export default function TransactionsScreen() {
       if (!groups[key]) groups[key] = [];
       groups[key].push(tx);
     });
-    return Object.entries(groups).sort(([a], [b]) => b.localeCompare(a));
+    return Object.entries(groups)
+      .sort(([a], [b]) => b.localeCompare(a))
+      .map(([date, txs]) => ({
+        date,
+        txs,
+        // saldo do dia (transferências não entram)
+        net: txs.reduce(
+          (sum, tx) =>
+            tx.type === "income" ? sum + tx.amount : tx.type === "expense" ? sum - tx.amount : sum,
+          0
+        ),
+      }));
   }, [filtered]);
 
-  const getTypeIcon = (type: TransactionType) => {
-    if (type === "income") return ArrowDownRight;
-    if (type === "transfer") return ArrowLeftRight;
-    return ArrowUpRight;
-  };
+  const activeFilterCount = [
+    filterCategory !== "all",
+    filterPeriodStart,
+    filterPeriodEnd,
+    filterMinAmount,
+    filterMaxAmount,
+  ].filter(Boolean).length;
 
   const handleDelete = (id: string) => {
     if (window.confirm(t("transactions.confirmDelete"))) {
@@ -113,24 +120,24 @@ export default function TransactionsScreen() {
   return (
     <div className="ff-page">
       <div className="p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="ff-heading text-2xl">{t("nav.transactions")}</h2>
-            <p className="ff-text-muted text-sm">{t("transactions.subtitle")}</p>
-          </div>
-          <motion.button
-            type="button"
-            onClick={() => {
-              setEditingTx(null);
-              setShowForm(true);
-            }}
-            className="w-12 h-12 rounded-full ff-fab flex items-center justify-center"
-            whileTap={{ scale: 0.9 }}
-            aria-label={t("transactions.add")}
-          >
-            <Plus className="w-6 h-6" />
-          </motion.button>
-        </div>
+        <ScreenHeader
+          title={t("nav.transactions")}
+          subtitle={t("transactions.subtitle")}
+          action={
+            <motion.button
+              type="button"
+              onClick={() => {
+                setEditingTx(null);
+                setShowForm(true);
+              }}
+              className="w-11 h-11 rounded-full ff-fab flex items-center justify-center"
+              whileTap={{ scale: 0.9 }}
+              aria-label={t("transactions.add")}
+            >
+              <Plus className="w-5 h-5" />
+            </motion.button>
+          }
+        />
 
         {/* Busca */}
         <div className="relative mb-4">
@@ -146,12 +153,29 @@ export default function TransactionsScreen() {
         </div>
 
         {/* Filtros por tipo */}
-        <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
+        <div className="ff-scroll-x mb-4 py-0.5" role="toolbar" aria-label={t("transactions.filters")}>
+          <button
+            type="button"
+            onClick={() => setShowFilters(!showFilters)}
+            aria-expanded={showFilters}
+            className={`px-3.5 py-2 rounded-full text-sm flex items-center gap-1.5 whitespace-nowrap ${
+              showFilters || activeFilterCount ? "ff-nav-active" : "ff-card-interactive"
+            }`}
+          >
+            <SlidersHorizontal className="w-4 h-4" aria-hidden="true" />
+            {t("transactions.filters")}
+            {activeFilterCount > 0 && (
+              <span className="ff-num text-[0.7rem] min-w-4 h-4 px-1 rounded-full grid place-items-center ff-fab">
+                {activeFilterCount}
+              </span>
+            )}
+          </button>
           {(["all", "income", "expense", "transfer"] as FilterType[]).map((type) => (
             <button
               key={type}
               type="button"
               onClick={() => setFilterType(type)}
+              aria-pressed={filterType === type}
               className={`px-4 py-2 rounded-full text-sm whitespace-nowrap transition-colors ${
                 filterType === type ? "ff-nav-active" : "ff-card-interactive"
               }`}
@@ -159,14 +183,6 @@ export default function TransactionsScreen() {
               {t(`transactions.type.${type}`)}
             </button>
           ))}
-          <button
-            type="button"
-            onClick={() => setShowFilters(!showFilters)}
-            className="px-4 py-2 rounded-full text-sm ff-card-interactive flex items-center gap-1 whitespace-nowrap"
-          >
-            <Filter className="w-4 h-4" />
-            {t("transactions.filters")}
-          </button>
         </div>
 
         <AnimatePresence>
@@ -256,73 +272,24 @@ export default function TransactionsScreen() {
         {filtered.length === 0 ? (
           <EmptyState title={t("transactions.empty")} description={t("transactions.emptyHint")} />
         ) : (
-          <div className="space-y-6">
-            {grouped.map(([date, txs]) => (
-              <div key={date}>
-                <p className="ff-text-muted text-xs mb-3 uppercase tracking-wide">
-                  {formatDate(date)}
-                </p>
-                <div className="space-y-3">
-                  {txs.map((tx) => {
-                    const Icon = getTypeIcon(tx.type);
-                    return (
-                      <motion.button
-                        key={tx.id}
-                        type="button"
-                        onClick={() => setSelectedTx(tx)}
-                        className="w-full ff-card-lg p-4 flex items-center gap-4 text-left"
-                        whileHover={{ scale: 1.01 }}
-                        whileTap={{ scale: 0.99 }}
-                      >
-                        <div
-                          className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
-                          style={{
-                            backgroundColor:
-                              tx.type === "income"
-                                ? "color-mix(in srgb, var(--ff-cyan) 20%, transparent)"
-                                : tx.type === "transfer"
-                                  ? "color-mix(in srgb, var(--ff-blue) 20%, transparent)"
-                                  : "color-mix(in srgb, var(--ff-expense) 20%, transparent)",
-                          }}
-                        >
-                          <Icon
-                            className="w-5 h-5"
-                            style={{
-                              color:
-                                tx.type === "income"
-                                  ? "var(--ff-cyan)"
-                                  : tx.type === "transfer"
-                                    ? "var(--ff-blue)"
-                                    : "var(--ff-expense)",
-                            }}
-                          />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="ff-text font-medium truncate">{tx.name}</p>
-                          <p className="ff-text-muted text-xs">
-                            {t(`categories.${tx.category}`)} · {t(`transactions.type.${tx.type}`)}
-                          </p>
-                        </div>
-                        <div className="text-right flex-shrink-0">
-                          <p
-                            className="font-semibold text-sm"
-                            style={{
-                              color:
-                                tx.type === "income" ? "var(--ff-cyan)" : "var(--ff-text)",
-                            }}
-                          >
-                            {tx.type === "income" ? "+" : "-"}
-                            {formatCurrency(tx.amount)}
-                          </p>
-                          <p className="ff-text-muted text-xs">
-                            {formatRelativeDate(tx.date, t)}
-                          </p>
-                        </div>
-                      </motion.button>
-                    );
-                  })}
+          <div className="space-y-2">
+            {grouped.map(({ date, txs, net }) => (
+              <section key={date} aria-label={formatDayLabel(date, t)}>
+                <div className="ff-day-header">
+                  <h2 className="ff-text-muted text-sm font-medium">{formatDayLabel(date, t)}</h2>
+                  {net !== 0 && (
+                    <span className="ff-num ff-text-faint text-xs">
+                      {net > 0 ? "+" : "−"}
+                      {formatCurrency(Math.abs(net))}
+                    </span>
+                  )}
                 </div>
-              </div>
+                <div className="ff-group">
+                  {txs.map((tx) => (
+                    <TransactionRow key={tx.id} transaction={tx} onSelect={setSelectedTx} />
+                  ))}
+                </div>
+              </section>
             ))}
           </div>
         )}

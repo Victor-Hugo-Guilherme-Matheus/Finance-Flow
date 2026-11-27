@@ -85,6 +85,7 @@ const pt = {
     categories: "Categorias",
     recentTransactions: "Transações recentes",
     accumulatedSavings: "Economia acumulada",
+    thisMonth: "Este mês",
     financialEvolution: "Evolução financeira",
     incomeVsExpenses: "Receitas x Despesas",
     spendingByCategory: "Gasto por categoria",
@@ -188,6 +189,13 @@ const pt = {
   goals: {
     title: "Metas financeiras",
     subtitle: "Acompanhe seu progresso de economia",
+    of: "de",
+    historyActions: {
+      created: "Meta criada",
+      updated: "Valor atualizado",
+      completed: "Concluída",
+      closed: "Encerrada",
+    },
     totalProgress: "Progresso total das metas",
     complete: "Concluído",
     remaining: "{{amount}} restantes",
@@ -404,6 +412,7 @@ const en: Widen<typeof pt> = {
     categories: "Categories",
     recentTransactions: "Recent Transactions",
     accumulatedSavings: "Accumulated savings",
+    thisMonth: "This month",
     financialEvolution: "Financial evolution",
     incomeVsExpenses: "Income vs Expenses",
     spendingByCategory: "Spending by category",
@@ -507,6 +516,13 @@ const en: Widen<typeof pt> = {
   goals: {
     title: "Financial Goals",
     subtitle: "Track your savings progress",
+    of: "of",
+    historyActions: {
+      created: "Goal created",
+      updated: "Amount updated",
+      completed: "Completed",
+      closed: "Closed",
+    },
     totalProgress: "Total Goals Progress",
     complete: "Complete",
     remaining: "{{amount}} remaining",
