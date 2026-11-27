@@ -12,6 +12,10 @@ Aplicativo web de finanças pessoais com interface *mobile-first*, desenvolvido 
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Firebase](https://img.shields.io/badge/Firebase-Auth_%2B_Firestore-FFCA28?logo=firebase&logoColor=black)
 
+### [🚀 Acessar o app online](https://financeflow-2f2f5.web.app)
+
+<sub>Funciona no navegador do celular ou do computador. Crie uma conta com e-mail ou entre com o Google.</sub>
+
 [Funcionalidades](#-funcionalidades) •
 [Telas](#-telas) •
 [Tecnologias](#️-tecnologias) •
@@ -153,6 +157,11 @@ npm run build
 npx firebase-tools deploy --only hosting
 ```
 
+A versão publicada fica em **https://financeflow-2f2f5.web.app**.
+
+### 6. Login com Google (opcional)
+No console do Firebase: **Authentication → Método de login → Adicionar novo provedor → Google → Ativar**.
+
 </details>
 
 ---
@@ -207,6 +216,9 @@ src/
 - [x] Cartões sem dados sensíveis
 - [x] Recuperação de senha pelo Firebase
 - [x] Banco organizado por usuário
+- [x] Login com Google
+- [x] Publicado no Firebase Hosting
+- [ ] Login com Apple
 - [ ] App instalável (PWA) e modo offline
 - [ ] Orçamento por categoria com alertas
 - [ ] Fatura de cartão, parcelamento e contas recorrentes

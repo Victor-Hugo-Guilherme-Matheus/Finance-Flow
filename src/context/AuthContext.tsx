@@ -15,6 +15,12 @@ import {
   updatePassword,
   EmailAuthProvider,
   reauthenticateWithCredential,
+  GoogleAuthProvider,
+  OAuthProvider,
+  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
+  type AuthProvider as FirebaseAuthProvider,
   type User as FirebaseUser,
 } from "firebase/auth";
 import { getDoc, setDoc, updateDoc, serverTimestamp } from "firebase/firestore";
@@ -33,12 +39,15 @@ interface AuthUser {
 
 type Result = { success: boolean; error?: string };
 
+export type SocialProvider = "google" | "apple";
+
 interface AuthContextValue {
   user: AuthUser | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<Result>;
   register: (data: { fullName: string; email: string; password: string }) => Promise<Result>;
   requestPasswordReset: (email: string) => Promise<Result>;
+  loginWithProvider: (provider: SocialProvider) => Promise<Result>;
   logout: () => void;
   updateProfile: (
     data: Partial<{ fullName: string; phone: string; avatarInitials: string }>
@@ -66,6 +75,15 @@ function authErrorKey(err: unknown, fallback: string): string {
       return "auth.tooManyRequests";
     case "auth/network-request-failed":
       return "auth.networkError";
+    case "auth/popup-closed-by-user":
+    case "auth/cancelled-popup-request":
+    case "auth/user-cancelled":
+      return "auth.socialCancelled";
+    case "auth/account-exists-with-different-credential":
+      return "auth.socialAccountExists";
+    case "auth/operation-not-allowed":
+    case "auth/unauthorized-domain":
+      return "auth.socialNotAvailable";
     default:
       return fallback;
   }
@@ -89,6 +107,35 @@ async function loadUser(firebaseUser: FirebaseUser): Promise<AuthUser> {
   };
 }
 
+function buildProvider(provider: SocialProvider): FirebaseAuthProvider {
+  if (provider === "google") {
+    const google = new GoogleAuthProvider();
+    google.setCustomParameters({ prompt: "select_account" });
+    return google;
+  }
+  const apple = new OAuthProvider("apple.com");
+  apple.addScope("email");
+  apple.addScope("name");
+  return apple;
+}
+
+/** Na primeira entrada com Google/Apple, cria o perfil em users/{uid} */
+async function ensureProfile(firebaseUser: FirebaseUser) {
+  const ref = userDoc(firebaseUser.uid);
+  const snap = await getDoc(ref);
+  if (snap.exists()) return;
+  const email = (firebaseUser.email ?? "").toLowerCase() || "sem e-mail";
+  const fullName = (firebaseUser.displayName || firebaseUser.email?.split("@")[0] || "Usuário").slice(0, 100);
+  await setDoc(ref, {
+    fullName,
+    email,
+    phone: "",
+    avatarInitials: getInitials(fullName),
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -97,6 +144,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const firebaseUser = auth.currentUser;
     if (!firebaseUser) return;
     setUser(await loadUser(firebaseUser));
+  }, []);
+
+  // Volta de um login por redirecionamento (usado quando o pop-up é bloqueado)
+  useEffect(() => {
+    getRedirectResult(auth)
+      .then(async (result) => {
+        if (!result) return;
+        await ensureProfile(result.user);
+        setUser(await loadUser(result.user));
+      })
+      .catch((err) => console.error("Erro no login por redirecionamento:", err));
   }, []);
 
   useEffect(() => {
@@ -158,6 +216,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const loginWithProvider = async (provider: SocialProvider): Promise<Result> => {
+    try {
+      const { user: firebaseUser } = await signInWithPopup(auth, buildProvider(provider));
+      await ensureProfile(firebaseUser);
+      setUser(await loadUser(firebaseUser));
+      return { success: true };
+    } catch (err) {
+      const code = (err as { code?: string })?.code;
+      // navegadores que bloqueiam pop-up (comum no celular): usa redirecionamento
+      if (code === "auth/popup-blocked" || code === "auth/operation-not-supported-in-this-environment") {
+        await signInWithRedirect(auth, buildProvider(provider));
+        return { success: true };
+      }
+      return { success: false, error: authErrorKey(err, "auth.socialFailed") };
+    }
+  };
+
   const logout = () => {
     signOut(auth);
     setUser(null);
@@ -206,6 +281,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login,
         register,
         requestPasswordReset,
+        loginWithProvider,
         logout,
         updateProfile,
         changePassword,
